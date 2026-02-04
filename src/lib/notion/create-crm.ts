@@ -21,6 +21,8 @@ export interface ProgressEvent {
   databaseName?: string;
   status: "pending" | "in_progress" | "success" | "error";
   error?: string;
+  pageId?: string;
+  pageUrl?: string;
 }
 
 interface DatabaseInfo {
@@ -88,6 +90,7 @@ export async function* createCRM(
     );
 
     const createdPageId = parentPage.id;
+    const pageUrl = `https://notion.so/${createdPageId.replace(/-/g, '')}`;
 
     yield {
       step: currentStep,
@@ -95,6 +98,8 @@ export async function* createCRM(
       phase: "creating_parent",
       message: `Created parent page: ${pageTitle}`,
       status: "success",
+      pageId: createdPageId,
+      pageUrl,
     };
 
     // PHASE 2: Create databases (without relations)
@@ -209,6 +214,8 @@ export async function* createCRM(
       message: "CRM created successfully!",
       status: "success",
       detail: `Created ${databases.size} databases with ${relationCount} relations`,
+      pageId: createdPageId,
+      pageUrl,
     };
   } catch (error: any) {
     yield {

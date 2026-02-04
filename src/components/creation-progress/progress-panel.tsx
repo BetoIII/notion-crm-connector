@@ -1,17 +1,21 @@
 "use client";
 
-import { useCreationStream } from "./use-creation-stream";
 import { ProgressStep } from "./progress-step";
 import { Button } from "@/components/ui/button";
 import { CheckCircle2, XCircle, ExternalLink } from "lucide-react";
+import { ProgressEvent } from "./use-creation-stream";
 
 interface ProgressPanelProps {
+  steps: ProgressEvent[];
+  status: "idle" | "creating" | "complete" | "error";
+  error: string | null;
+  pageUrl?: string;
+  onReset: () => void;
   onComplete?: () => void;
   onError?: () => void;
 }
 
-export function ProgressPanel({ onComplete, onError }: ProgressPanelProps) {
-  const { steps, status, error, reset } = useCreationStream();
+export function ProgressPanel({ steps, status, error, pageUrl, onReset, onComplete, onError }: ProgressPanelProps) {
 
   const isComplete = status === "complete";
   const hasError = status === "error";
@@ -60,20 +64,22 @@ export function ProgressPanel({ onComplete, onError }: ProgressPanelProps) {
             Your CRM databases have been created in your Notion workspace.
           </p>
           <div className="flex items-center justify-center gap-3">
-            <Button variant="outline" onClick={reset}>
+            <Button variant="outline" onClick={onReset}>
               Create Another CRM
             </Button>
-            <Button asChild>
-              <a
-                href="https://notion.so"
-                target="_blank"
-                rel="noopener noreferrer"
-                className="gap-2"
-              >
-                <ExternalLink className="h-4 w-4" />
-                Open in Notion
-              </a>
-            </Button>
+            {pageUrl && (
+              <Button asChild>
+                <a
+                  href={pageUrl}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="gap-2"
+                >
+                  <ExternalLink className="h-4 w-4" />
+                  Open in Notion
+                </a>
+              </Button>
+            )}
           </div>
         </div>
       )}
@@ -86,7 +92,7 @@ export function ProgressPanel({ onComplete, onError }: ProgressPanelProps) {
           <p className="text-sm text-muted-foreground mb-4">
             {error || "An unknown error occurred"}
           </p>
-          <Button variant="outline" onClick={reset}>
+          <Button variant="outline" onClick={onReset}>
             Try Again
           </Button>
         </div>

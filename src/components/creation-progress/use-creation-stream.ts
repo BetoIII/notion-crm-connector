@@ -12,6 +12,8 @@ export interface ProgressEvent {
   databaseName?: string;
   status: "pending" | "in_progress" | "success" | "error";
   error?: string;
+  pageId?: string;
+  pageUrl?: string;
 }
 
 type CreationStatus = "idle" | "creating" | "complete" | "error";
@@ -20,11 +22,13 @@ export function useCreationStream() {
   const [steps, setSteps] = useState<ProgressEvent[]>([]);
   const [status, setStatus] = useState<CreationStatus>("idle");
   const [error, setError] = useState<string | null>(null);
+  const [pageUrl, setPageUrl] = useState<string | undefined>(undefined);
 
   const startCreation = useCallback(async (schema: CRMSchema, pageTitle: string, parentPageId?: string) => {
     setStatus("creating");
     setSteps([]);
     setError(null);
+    setPageUrl(undefined);
 
     try {
       const response = await fetch("/api/crm/create", {
@@ -58,7 +62,21 @@ export function useCreationStream() {
           if (line.startsWith("data: ")) {
             try {
               const event: ProgressEvent = JSON.parse(line.slice(6));
-              setSteps((prev) => [...prev, event]);
+
+              // Replace events with the same step number (e.g., in_progress → success)
+              setSteps((prev) => {
+                const existingIndex = prev.findIndex(e => e.step === event.step);
+                if (existingIndex >= 0) {
+                  const updated = [...prev];
+                  updated[existingIndex] = event;
+                  return updated;
+                }
+                return [...prev, event];
+              });
+
+              if (event.pageUrl) {
+                setPageUrl(event.pageUrl);
+              }
 
               if (event.phase === "complete") {
                 setStatus("complete");
@@ -83,12 +101,14 @@ export function useCreationStream() {
     setSteps([]);
     setStatus("idle");
     setError(null);
+    setPageUrl(undefined);
   }, []);
 
   return {
     steps,
     status,
     error,
+    pageUrl,
     startCreation,
     reset,
   };

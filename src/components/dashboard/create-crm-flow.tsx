@@ -2,10 +2,11 @@
 
 import { useState, useEffect } from "react";
 import dynamic from "next/dynamic";
-import { useSchema } from "@/hooks/use-schema";
+import { useSchema, useSchemaMutations, SchemaType } from "@/hooks/use-schema";
 import { useCreationStream } from "@/components/creation-progress/use-creation-stream";
 import { ProgressPanel } from "@/components/creation-progress/progress-panel";
 import { Button } from "@/components/ui/button";
+import { SchemaTypeSelector } from "./schema-type-selector";
 
 const SchemaTree = dynamic(
   () => import("@/components/schema-editor/schema-tree").then(mod => ({ default: mod.SchemaTree })),
@@ -40,7 +41,8 @@ interface NotionPage {
 }
 
 export function CreateCRMFlow() {
-  const { schema } = useSchema();
+  const { schema, schemaType } = useSchema();
+  const { setSchemaType } = useSchemaMutations();
   const { status, steps, error, pageUrl, startCreation, reset } = useCreationStream();
   const [showConfirmDialog, setShowConfirmDialog] = useState(false);
   const [pageTitle, setPageTitle] = useState("CRM & Sales Pipeline");
@@ -75,6 +77,12 @@ export function CreateCRMFlow() {
     }
   };
 
+  const handleSchemaTypeChange = (newType: SchemaType) => {
+    setSchemaType(newType);
+    // Update page title based on schema type
+    setPageTitle(newType === "real-estate" ? "Real Estate CRM" : "CRM & Sales Pipeline");
+  };
+
   const handleCreateClick = () => {
     setShowConfirmDialog(true);
   };
@@ -97,19 +105,25 @@ export function CreateCRMFlow() {
   const isButtonDisabled = !parentPageId || !pageTitle;
 
   return (
-    <div className="space-y-6">
-      {/* Create CRM Button */}
+    <div className="space-y-8">
+      {/* Schema Type Selector & Create CRM Button */}
       {!showProgress && (
-        <div className="flex justify-end">
-          <Button
-            variant="default"
-            size="lg"
-            onClick={handleCreateClick}
-            className="gap-2"
-          >
-            <Rocket className="h-5 w-5" />
-            Create CRM
-          </Button>
+        <div className="space-y-6">
+          <SchemaTypeSelector
+            selected={schemaType}
+            onChange={handleSchemaTypeChange}
+          />
+          <div className="flex justify-end">
+            <Button
+              variant="default"
+              size="lg"
+              onClick={handleCreateClick}
+              className="gap-2"
+            >
+              <Rocket className="h-5 w-5" />
+              Create CRM
+            </Button>
+          </div>
         </div>
       )}
 
@@ -132,7 +146,9 @@ export function CreateCRMFlow() {
       <AlertDialog open={showConfirmDialog} onOpenChange={setShowConfirmDialog}>
         <AlertDialogContent aria-describedby="create-crm-description">
           <AlertDialogHeader>
-            <AlertDialogTitle>Create CRM in Notion?</AlertDialogTitle>
+            <AlertDialogTitle>
+              Create {schemaType === "real-estate" ? "Real Estate" : "Standard"} CRM in Notion?
+            </AlertDialogTitle>
             <div id="create-crm-description" className="space-y-5">
               <div className="space-y-2">
                 <Label htmlFor="page-title" className="text-sm font-medium text-white">
@@ -142,7 +158,7 @@ export function CreateCRMFlow() {
                   id="page-title"
                   value={pageTitle}
                   onChange={(e) => setPageTitle(e.target.value)}
-                  placeholder="CRM & Sales Pipeline"
+                  placeholder={schemaType === "real-estate" ? "Real Estate CRM" : "CRM & Sales Pipeline"}
                   className="bg-white/5 border-white/15 text-white placeholder:text-white/40"
                 />
                 <p className="text-xs text-white/60">

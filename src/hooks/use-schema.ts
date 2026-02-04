@@ -7,6 +7,10 @@ import {
   DatabaseDefinition,
 } from "@/lib/schema/types";
 import { getDefaultSchema } from "@/lib/schema/default-schema";
+import { getRealEstateSchema } from "@/lib/schema/real-estate-schema";
+
+// Schema type
+export type SchemaType = "standard" | "real-estate";
 
 // Action types
 type SchemaAction =
@@ -30,91 +34,127 @@ type SchemaAction =
       newIndex: number;
     }
   | { type: "RESET_SCHEMA" }
-  | { type: "SET_SCHEMA"; schema: CRMSchema };
+  | { type: "SET_SCHEMA"; schema: CRMSchema }
+  | { type: "SET_SCHEMA_TYPE"; schemaType: SchemaType };
+
+// State interface
+interface SchemaState {
+  schema: CRMSchema;
+  schemaType: SchemaType;
+}
 
 // Schema reducer
-function schemaReducer(state: CRMSchema, action: SchemaAction): CRMSchema {
+function schemaReducer(state: SchemaState, action: SchemaAction): SchemaState {
   switch (action.type) {
     case "RENAME_DATABASE": {
       return {
         ...state,
-        databases: state.databases.map((db) =>
-          db.id === action.databaseId ? { ...db, name: action.name } : db
-        ),
+        schema: {
+          ...state.schema,
+          databases: state.schema.databases.map((db) =>
+            db.id === action.databaseId ? { ...db, name: action.name } : db
+          ),
+        },
       };
     }
 
     case "ADD_PROPERTY": {
       return {
         ...state,
-        databases: state.databases.map((db) =>
-          db.id === action.databaseId
-            ? { ...db, properties: [...db.properties, action.property] }
-            : db
-        ),
+        schema: {
+          ...state.schema,
+          databases: state.schema.databases.map((db) =>
+            db.id === action.databaseId
+              ? { ...db, properties: [...db.properties, action.property] }
+              : db
+          ),
+        },
       };
     }
 
     case "UPDATE_PROPERTY": {
       return {
         ...state,
-        databases: state.databases.map((db) =>
-          db.id === action.databaseId
-            ? {
-                ...db,
-                properties: db.properties.map((prop) =>
-                  prop.id === action.propertyId
-                    ? { ...prop, ...action.updates }
-                    : prop
-                ),
-              }
-            : db
-        ),
+        schema: {
+          ...state.schema,
+          databases: state.schema.databases.map((db) =>
+            db.id === action.databaseId
+              ? {
+                  ...db,
+                  properties: db.properties.map((prop) =>
+                    prop.id === action.propertyId
+                      ? { ...prop, ...action.updates }
+                      : prop
+                  ),
+                }
+              : db
+          ),
+        },
       };
     }
 
     case "DELETE_PROPERTY": {
       return {
         ...state,
-        databases: state.databases.map((db) =>
-          db.id === action.databaseId
-            ? {
-                ...db,
-                properties: db.properties.filter(
-                  (prop) => prop.id !== action.propertyId
-                ),
-              }
-            : db
-        ),
+        schema: {
+          ...state.schema,
+          databases: state.schema.databases.map((db) =>
+            db.id === action.databaseId
+              ? {
+                  ...db,
+                  properties: db.properties.filter(
+                    (prop) => prop.id !== action.propertyId
+                  ),
+                }
+              : db
+          ),
+        },
       };
     }
 
     case "REORDER_PROPERTY": {
       return {
         ...state,
-        databases: state.databases.map((db) => {
-          if (db.id !== action.databaseId) return db;
+        schema: {
+          ...state.schema,
+          databases: state.schema.databases.map((db) => {
+            if (db.id !== action.databaseId) return db;
 
-          const properties = [...db.properties];
-          const currentIndex = properties.findIndex(
-            (p) => p.id === action.propertyId
-          );
-          if (currentIndex === -1) return db;
+            const properties = [...db.properties];
+            const currentIndex = properties.findIndex(
+              (p) => p.id === action.propertyId
+            );
+            if (currentIndex === -1) return db;
 
-          const [removed] = properties.splice(currentIndex, 1);
-          properties.splice(action.newIndex, 0, removed);
+            const [removed] = properties.splice(currentIndex, 1);
+            properties.splice(action.newIndex, 0, removed);
 
-          return { ...db, properties };
-        }),
+            return { ...db, properties };
+          }),
+        },
       };
     }
 
     case "RESET_SCHEMA": {
-      return getDefaultSchema();
+      return {
+        ...state,
+        schema: state.schemaType === "real-estate" ? getRealEstateSchema() : getDefaultSchema(),
+      };
     }
 
     case "SET_SCHEMA": {
-      return action.schema;
+      return {
+        ...state,
+        schema: action.schema,
+      };
+    }
+
+    case "SET_SCHEMA_TYPE": {
+      return {
+        ...state,
+        schemaType: action.schemaType,
+        schema: action.schemaType === "real-estate" ? getRealEstateSchema() : getDefaultSchema(),
+      };
     }
 
     default:
@@ -125,6 +165,7 @@ function schemaReducer(state: CRMSchema, action: SchemaAction): CRMSchema {
 // Context
 interface SchemaContextValue {
   schema: CRMSchema;
+  schemaType: SchemaType;
   dispatch: Dispatch<SchemaAction>;
 }
 
@@ -132,9 +173,12 @@ const SchemaContext = createContext<SchemaContextValue | null>(null);
 
 // Provider
 export function SchemaProvider({ children }: { children: ReactNode }) {
-  const [schema, dispatch] = useReducer(schemaReducer, getDefaultSchema());
+  const [state, dispatch] = useReducer(schemaReducer, {
+    schema: getDefaultSchema(),
+    schemaType: "standard" as SchemaType,
+  });
 
-  const value = { schema, dispatch };
+  const value = { schema: state.schema, schemaType: state.schemaType, dispatch };
 
   return createElement(SchemaContext.Provider, { value }, children);
 }
@@ -177,5 +221,7 @@ export function useSchemaMutations() {
     resetSchema: () => dispatch({ type: "RESET_SCHEMA" }),
 
     setSchema: (schema: CRMSchema) => dispatch({ type: "SET_SCHEMA", schema }),
+
+    setSchemaType: (schemaType: SchemaType) => dispatch({ type: "SET_SCHEMA_TYPE", schemaType }),
   };
 }

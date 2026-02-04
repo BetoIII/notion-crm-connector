@@ -105,7 +105,7 @@ export function createRelationProperty(
     [property.name]: {
       type: "relation",
       relation: {
-        data_source_id: targetDataSourceId,
+        database_id: targetDataSourceId,
         type: "dual_property",
         dual_property: {
           synced_property_name: property.relation.syncedPropertyName,

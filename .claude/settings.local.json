@@ -24,7 +24,13 @@
       "Bash(npx shadcn@latest add accordion button dialog badge input label select)",
       "Bash(npx shadcn@latest add alert-dialog:*)",
       "Bash(git init:*)",
-      "Bash(git add:*)"
+      "Bash(git add:*)",
+      "Bash(git commit -m \"$\\(cat <<''EOF''\nInitial commit: Notion CRM Connector\n\nA Next.js web application that creates and manages personal CRM databases\nin Notion workspaces with Accounts, Contacts, and Opportunities databases.\n\nFeatures:\n- Secure OAuth authentication with Notion\n- Customizable schema editor with real-time progress updates\n- Smart bidirectional relations between databases\n- Modern UI with shadcn/ui and Tailwind CSS\n\nCo-Authored-By: Claude Sonnet 4.5 <noreply@anthropic.com>\nEOF\n\\)\")",
+      "Bash(gh repo create:*)",
+      "Bash(gh auth refresh:*)",
+      "Bash(git commit -m \"$\\(cat <<''EOF''\nFix CRM creation UI to show real-time progress and completion status\n\n- Fix state sharing issue where ProgressPanel wasn''t receiving updates\n- Add page URL tracking to link directly to created Notion page\n- Update progress events to replace in-place instead of appending duplicates\n- Remove lingering \"in_progress\" icons by updating events with same step number\n- Pass state as props from CreateCRMFlow to ProgressPanel for proper reactivity\n\nCo-Authored-By: Claude Sonnet 4.5 <noreply@anthropic.com>\nEOF\n\\)\")",
+      "Bash(git push:*)",
+      "Bash(git commit -m \"$\\(cat <<''EOF''\nFix Notion API endpoint inconsistencies for database operations\n\n- Update updateDataSource to use /databases endpoint instead of /data_sources\n- Change relation property field from data_source_id to database_id\n- Add appendBlockChildren method to client for future block operations\n- Add cursor pointer styles for better UX on interactive elements\n\nCo-Authored-By: Claude Sonnet 4.5 <noreply@anthropic.com>\nEOF\n\\)\")"
     ]
   }
 }

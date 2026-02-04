@@ -77,7 +77,7 @@ export class NotionClient {
   }
 
   async updateDataSource(dataSourceId: string, data: any) {
-    return this.request(`/data_sources/${dataSourceId}`, {
+    return this.request(`/databases/${dataSourceId}`, {
       method: "PATCH",
       body: JSON.stringify(data),
     });
@@ -93,6 +93,13 @@ export class NotionClient {
         },
         ...(query && { query }),
       }),
+    });
+  }
+
+  async appendBlockChildren(blockId: string, children: any[]) {
+    return this.request(`/blocks/${blockId}/children`, {
+      method: "PATCH",
+      body: JSON.stringify({ children }),
     });
   }
 }

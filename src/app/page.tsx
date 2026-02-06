@@ -27,53 +27,73 @@ function ErrorMessage() {
 
 export default function Home() {
   return (
-    <main className="relative min-h-screen overflow-hidden bg-background">
-      {/* Animated Grid Background */}
+    <main className="relative min-h-screen overflow-hidden bg-cream texture-wood grain-overlay">
+      {/* 80s Office Background */}
       <div className="absolute inset-0 -z-10">
-        <div className="absolute inset-0 bg-grid-pattern opacity-[0.03]" />
-        <div className="absolute inset-0 bg-gradient-to-br from-primary/5 via-transparent to-secondary/5" />
+        {/* Wood paneling effect */}
+        <div className="absolute inset-0 effect-scanlines opacity-30" />
 
-        {/* Floating geometric accents */}
-        <div className="absolute right-[10%] top-[15%] h-64 w-64 rounded-full bg-primary/5 blur-3xl animate-float" />
-        <div className="absolute left-[15%] bottom-[20%] h-48 w-48 rounded-full bg-secondary/5 blur-3xl animate-float-delayed" />
+        {/* Vintage office elements - subtle illustrations */}
+        <div className="absolute right-[10%] top-[15%] opacity-5">
+          <svg width="120" height="120" viewBox="0 0 24 24" fill="none" className="text-wood-dark">
+            <circle cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="1.5"/>
+            <circle cx="12" cy="12" r="3" fill="currentColor"/>
+            {/* Rotary dial holes */}
+            {[0, 1, 2, 3, 4, 5, 6, 7, 8, 9].map((i) => {
+              const angle = (i * 36 - 90) * (Math.PI / 180);
+              const x = 12 + 6 * Math.cos(angle);
+              const y = 12 + 6 * Math.sin(angle);
+              return <circle key={i} cx={x} cy={y} r="0.8" fill="currentColor" />;
+            })}
+          </svg>
+        </div>
+
+        {/* Index card stack */}
+        <div className="absolute left-[15%] bottom-[20%] opacity-5">
+          <div className="relative">
+            <div className="absolute w-32 h-20 bg-cream border-2 border-wood-dark transform rotate-3" />
+            <div className="absolute w-32 h-20 bg-cream border-2 border-wood-dark transform rotate-1" />
+            <div className="absolute w-32 h-20 bg-cream border-2 border-wood-dark" />
+          </div>
+        </div>
       </div>
 
       {/* Main Content */}
       <div className="container relative mx-auto flex min-h-screen max-w-6xl flex-col items-center justify-center px-6 py-12">
-        {/* Logo/Brand Mark - Minimalist Icon */}
-        <div className="mb-8 flex h-20 w-20 items-center justify-center rounded-2xl border-2 border-primary/20 bg-gradient-to-br from-primary/10 to-primary/5 backdrop-blur-sm">
+        {/* Logo/Brand Mark - Rotary Card Filer */}
+        <div className="mb-8 flex h-24 w-24 items-center justify-center rounded border-4 border-wood-medium texture-wood shadow-xl">
           <svg
             viewBox="0 0 24 24"
             fill="none"
-            className="h-10 w-10 text-primary"
+            className="h-14 w-14 text-amber-glow drop-shadow-lg"
             xmlns="http://www.w3.org/2000/svg"
           >
-            <path
-              d="M4 6h16M4 12h16M4 18h16M8 6v12M16 6v12"
-              stroke="currentColor"
-              strokeWidth="2"
-              strokeLinecap="round"
-            />
+            {/* Rotary file icon */}
+            <rect x="3" y="8" width="18" height="12" rx="1" stroke="currentColor" strokeWidth="2" fill="none"/>
+            <path d="M6 8 L6 5 C6 4 7 3 8 3 L16 3 C17 3 18 4 18 5 L18 8" stroke="currentColor" strokeWidth="2" fill="none"/>
+            <line x1="7" y1="12" x2="17" y2="12" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round"/>
+            <line x1="7" y1="15" x2="14" y2="15" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round"/>
+            <circle cx="12" cy="18" r="1.5" fill="currentColor"/>
           </svg>
         </div>
 
         {/* Hero Content */}
         <div className="text-center">
-          <h1 className="mb-4 text-5xl font-bold tracking-tight sm:text-6xl lg:text-7xl">
-            <span className="bg-gradient-to-br from-foreground to-foreground/70 bg-clip-text text-transparent">
-              Notion CRM
+          <h1 className="mb-4 text-5xl font-bold font-heading tracking-tight sm:text-6xl lg:text-7xl text-charcoal text-embossed">
+            <span className="text-wood-dark">
+              NOTION CRM
             </span>
             <br />
-            <span className="bg-gradient-to-br from-primary to-primary/60 bg-clip-text text-transparent">
-              Connector
+            <span className="text-amber-glow drop-shadow-lg">
+              CONNECTOR
             </span>
           </h1>
 
-          <p className="mx-auto mb-3 max-w-2xl text-lg text-muted-foreground sm:text-xl">
+          <p className="mx-auto mb-3 max-w-2xl text-lg font-body text-smoke sm:text-xl">
             Create and manage personal CRMs in your Notion workspace
           </p>
 
-          <p className="mx-auto mb-12 max-w-xl text-sm text-muted-foreground/80">
+          <p className="mx-auto mb-12 max-w-xl text-sm font-body text-smoke/80">
             Build structured databases for accounts, contacts, and opportunities—all
             connected with intelligent relations
           </p>
@@ -87,14 +107,14 @@ export default function Home() {
           <div className="flex flex-col items-center gap-4">
             <ConnectNotionButton />
 
-            <p className="text-xs text-muted-foreground/60">
+            <p className="text-xs font-body text-smoke/60">
               Using internal integration (dev mode)
             </p>
           </div>
         </div>
 
-        {/* Feature Pills */}
-        <div className="mt-16 flex flex-wrap justify-center gap-3">
+        {/* Feature Pills - Office Sign Style */}
+        <div className="mt-16 flex flex-wrap justify-center gap-4">
           {[
             "3 Connected Databases",
             "Smart Relations",
@@ -103,11 +123,12 @@ export default function Home() {
           ].map((feature, i) => (
             <div
               key={feature}
-              className="rounded-full border border-border bg-card/50 px-4 py-2 text-xs font-medium text-muted-foreground backdrop-blur-sm"
+              className="texture-wood border-2 border-wood-dark px-5 py-2.5 text-xs font-bold font-body uppercase tracking-wider text-cream shadow-lg transform hover:scale-105 transition-transform"
               style={{
                 animationDelay: `${i * 100}ms`,
                 animation: "fadeInUp 0.5s ease-out forwards",
                 opacity: 0,
+                borderRadius: '2px',
               }}
             >
               {feature}

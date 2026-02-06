@@ -1,7 +1,9 @@
 import { getSession } from "@/lib/auth/session";
 import { redirect } from "next/navigation";
 import { CreateCRMFlow } from "@/components/dashboard/create-crm-flow";
+import { MessageTemplatesSection } from "@/components/messages/message-templates-section";
 import { Button } from "@/components/ui/button";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 
 export default async function DashboardPage() {
   // For internal integration (dev mode), skip OAuth session
@@ -30,8 +32,21 @@ export default async function DashboardPage() {
           )}
         </div>
 
-        {/* Schema Editor + Creation Flow */}
-        <CreateCRMFlow />
+        {/* Tabs for different sections */}
+        <Tabs defaultValue="crm" className="w-full">
+          <TabsList className="mb-6">
+            <TabsTrigger value="crm">CRM Builder</TabsTrigger>
+            <TabsTrigger value="messages">Message Templates</TabsTrigger>
+          </TabsList>
+
+          <TabsContent value="crm">
+            <CreateCRMFlow />
+          </TabsContent>
+
+          <TabsContent value="messages">
+            <MessageTemplatesSection />
+          </TabsContent>
+        </Tabs>
       </div>
     </div>
   );

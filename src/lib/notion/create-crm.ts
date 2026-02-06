@@ -87,7 +87,7 @@ export async function* createCRM(
           },
         },
       })
-    );
+    ) as { id: string };
 
     const createdPageId = parentPage.id;
     const pageUrl = `https://notion.so/${createdPageId.replace(/-/g, '')}`;
@@ -133,7 +133,7 @@ export async function* createCRM(
           }),
           properties,
         })
-      );
+      ) as { id: string };
 
       // Extract data_source_id
       const dataSourceId = dbResponse.id; // In newer API, DB ID = data source ID

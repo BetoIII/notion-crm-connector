@@ -280,7 +280,7 @@ export function CreateCRMFlow() {
                           {db.name}
                         </div>
                         <div className="text-sm text-white/60">
-                          {db.properties.length} properties · {db.relations?.length || 0} relations
+                          {db.properties.length} properties · {db.properties.filter(p => p.type === 'relation').length} relations
                         </div>
                       </div>
                     </div>

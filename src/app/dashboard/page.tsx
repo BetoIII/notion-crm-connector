@@ -2,6 +2,7 @@ import { getSession } from "@/lib/auth/session";
 import { redirect } from "next/navigation";
 import { CreateCRMFlow } from "@/components/dashboard/create-crm-flow";
 import { MessageTemplatesSection } from "@/components/messages/message-templates-section";
+import { SendSMSFlow } from "@/components/messages/send-sms-flow";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 
@@ -37,6 +38,7 @@ export default async function DashboardPage() {
           <TabsList className="mb-6">
             <TabsTrigger value="crm">CRM Builder</TabsTrigger>
             <TabsTrigger value="messages">Message Templates</TabsTrigger>
+            <TabsTrigger value="send-sms">Send SMS</TabsTrigger>
           </TabsList>
 
           <TabsContent value="crm">
@@ -45,6 +47,10 @@ export default async function DashboardPage() {
 
           <TabsContent value="messages">
             <MessageTemplatesSection />
+          </TabsContent>
+
+          <TabsContent value="send-sms">
+            <SendSMSFlow />
           </TabsContent>
         </Tabs>
       </div>

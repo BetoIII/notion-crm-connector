@@ -226,61 +226,6 @@ ${promptLines.join("\n\n")}`;
           </div>
         </div>
       )}
-
-      {/* Message Previews */}
-      <div className="rounded-lg border border-border/60 bg-card shadow-sm">
-        <div className="border-b border-border/50 bg-muted/20 px-4 py-3">
-          <h4 className="text-sm font-semibold uppercase tracking-wider text-foreground/90">
-            Message Previews
-          </h4>
-        </div>
-
-        <div className="max-h-[400px] space-y-3 overflow-y-auto p-4">
-          {generatedPrompts.map((prompt, idx) => (
-            <div
-              key={prompt.contact.id}
-              className={`rounded-lg border p-3 ${
-                !prompt.contact.phone
-                  ? "border-destructive/30 bg-destructive/5"
-                  : prompt.missingVars.length > 0
-                  ? "border-amber-500/30 bg-amber-500/5"
-                  : "border-border/40 bg-card/50"
-              }`}
-            >
-              <div className="mb-2 flex items-start justify-between">
-                <div className="flex-1">
-                  <p className="text-sm font-semibold">
-                    {prompt.contact.contact_name || "Unknown Contact"}
-                  </p>
-                  <p className="text-xs text-muted-foreground">
-                    {prompt.contact.phone || "No phone number"}
-                  </p>
-                </div>
-                {!prompt.contact.phone && (
-                  <Badge variant="destructive" className="text-xs">
-                    No Phone
-                  </Badge>
-                )}
-                {prompt.contact.phone && prompt.missingVars.length > 0 && (
-                  <Badge variant="outline" className="border-amber-500 text-xs text-amber-600">
-                    Missing Vars
-                  </Badge>
-                )}
-              </div>
-
-              <div className="mt-2 rounded border border-border/30 bg-background/50 p-2 text-xs text-muted-foreground">
-                {prompt.message}
-              </div>
-
-              {prompt.missingVars.length > 0 && (
-                <p className="mt-2 text-xs text-amber-600">
-                  Missing: {prompt.missingVars.map((v) => `{{${v}}}`).join(", ")}
-                </p>
-              )}
-            </div>
-          ))}
-        </div>
-      </div>
     </div>
   );
 }

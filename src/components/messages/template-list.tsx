@@ -10,7 +10,6 @@ import type { MessageTemplate } from "@/lib/templates/types";
 
 interface TemplateListProps {
   templates: MessageTemplate[];
-  onUse: (template: MessageTemplate) => void;
   onEdit: (template: MessageTemplate) => void;
   onDelete: (templateId: number) => Promise<void>;
   onRefresh: () => void;
@@ -18,7 +17,6 @@ interface TemplateListProps {
 
 export function TemplateList({
   templates,
-  onUse,
   onEdit,
   onDelete,
   onRefresh,
@@ -122,7 +120,7 @@ export function TemplateList({
                 </p>
 
                 {variables.length > 0 && (
-                  <div className="mb-3 flex flex-wrap gap-1">
+                  <div className="flex flex-wrap gap-1">
                     {variables.map((variable) => (
                       <Badge key={variable} variant="secondary" className="text-xs">
                         {`{{${variable}}}`}
@@ -130,15 +128,6 @@ export function TemplateList({
                     ))}
                   </div>
                 )}
-
-                <Button
-                  type="button"
-                  size="sm"
-                  className="w-full"
-                  onClick={() => onUse(template)}
-                >
-                  Use Template
-                </Button>
               </div>
             );
           })}

@@ -117,6 +117,11 @@ export async function GET(
 
   const { databaseId } = await params;
 
+  // Check for raw and limit query params
+  const searchParams = request.nextUrl.searchParams;
+  const raw = searchParams.get("raw") === "true";
+  const limit = searchParams.get("limit") ? parseInt(searchParams.get("limit")!, 10) : 100;
+
   try {
     // Fetch all pages from the database
     const response = await fetch(
@@ -129,7 +134,7 @@ export async function GET(
           "Content-Type": "application/json",
         },
         body: JSON.stringify({
-          page_size: 100,
+          page_size: Math.min(limit, 100),
         }),
       }
     );
@@ -145,6 +150,11 @@ export async function GET(
 
     const data = await response.json();
     console.log(`Found ${data.results?.length || 0} records in database ${databaseId}`);
+
+    // If raw=true, return the raw Notion records
+    if (raw) {
+      return NextResponse.json({ records: data.results });
+    }
 
     // Extract contact data from each page
     const records = data.results.map((page: any) => {

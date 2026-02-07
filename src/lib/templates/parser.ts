@@ -74,7 +74,8 @@ export function validateVariables(
   const missing: string[] = [];
 
   for (const name of variableNames) {
-    if (!enhancedData[name] || enhancedData[name].trim() === "") {
+    const value = enhancedData[name];
+    if (!value || (typeof value === 'string' && value.trim() === "")) {
       missing.push(name);
     }
   }
@@ -114,10 +115,15 @@ export function splitFullName(fullName: string): { first_name: string; last_name
 
 /**
  * Enhance contact data with first_name and last_name if not already present
- * Automatically splits contact_name if needed
+ * Automatically splits contact_name or name if needed
  */
 export function enhanceContactData(contactData: ContactData): ContactData {
   const enhanced = { ...contactData };
+
+  // Handle the 'name' field from local contacts (map to contact_name)
+  if ((contactData as any).name && !enhanced.contact_name) {
+    enhanced.contact_name = (contactData as any).name;
+  }
 
   // If first_name and last_name are already present, no need to split
   if (enhanced.first_name && enhanced.last_name) {

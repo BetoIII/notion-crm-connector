@@ -3,6 +3,7 @@ import { redirect } from "next/navigation";
 import { CreateCRMFlow } from "@/components/dashboard/create-crm-flow";
 import { MessageTemplatesSection } from "@/components/messages/message-templates-section";
 import { SendSMSFlowStepper } from "@/components/messages/send-sms-flow-stepper";
+import { ContactsPage } from "@/components/contacts/contacts-page";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 
@@ -34,8 +35,17 @@ export default async function DashboardPage() {
         </div>
 
         {/* Tabs for different sections - File Folder Style */}
-        <Tabs defaultValue="crm" className="w-full">
+        <Tabs defaultValue="contacts" className="w-full">
           <TabsList className="mb-0">
+            <TabsTrigger value="contacts">
+              <svg className="w-4 h-4 mr-2" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                <path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/>
+                <circle cx="9" cy="7" r="4"/>
+                <path d="M22 21v-2a4 4 0 0 0-3-3.87"/>
+                <path d="M16 3.13a4 4 0 0 1 0 7.75"/>
+              </svg>
+              Contacts
+            </TabsTrigger>
             <TabsTrigger value="crm">
               <svg className="w-4 h-4 mr-2" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
                 <rect x="3" y="8" width="18" height="12" rx="1"/>
@@ -61,6 +71,10 @@ export default async function DashboardPage() {
               Send SMS
             </TabsTrigger>
           </TabsList>
+
+          <TabsContent value="contacts" className="bg-cream texture-paper card-paper p-6 rounded-b border-2 border-t-0 border-wood-light">
+            <ContactsPage />
+          </TabsContent>
 
           <TabsContent value="crm" className="bg-cream texture-paper card-paper p-6 rounded-b border-2 border-t-0 border-wood-light">
             <CreateCRMFlow />

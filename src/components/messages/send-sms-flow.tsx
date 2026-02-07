@@ -13,7 +13,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import type { MessageTemplate, ContactRecord } from "@/lib/templates/types";
+import type { MessageTemplate, ContactRecord, Contact } from "@/lib/templates/types";
 
 export function SendSMSFlow() {
   const [templates, setTemplates] = useState<MessageTemplate[]>([]);
@@ -41,8 +41,8 @@ export function SendSMSFlow() {
     }
   };
 
-  const handleContactsSelected = useCallback((contacts: ContactRecord[]) => {
-    setSelectedContacts(contacts);
+  const handleContactsSelected = useCallback((contacts: Contact[]) => {
+    setSelectedContacts(contacts as any);
   }, []);
 
   return (

@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect, useCallback } from "react";
+import { useSearchParams } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { SMSStepper } from "./sms-stepper";
 import { TemplateSelectorCards } from "./template-selector-cards";
@@ -8,7 +9,7 @@ import { ContactSelector } from "./contact-selector";
 import { MessagePreviewCarousel } from "./message-preview-carousel";
 import { PromptGeneratorEnhanced } from "./prompt-generator-enhanced";
 import { Loader2, ChevronRight, ChevronLeft, Send } from "lucide-react";
-import type { MessageTemplate, ContactRecord } from "@/lib/templates/types";
+import type { MessageTemplate, Contact, ContactRecord } from "@/lib/templates/types";
 
 const STEPS = [
   {
@@ -29,11 +30,24 @@ const STEPS = [
 ];
 
 export function SendSMSFlowStepper() {
+  const searchParams = useSearchParams();
   const [currentStep, setCurrentStep] = useState(1);
   const [templates, setTemplates] = useState<MessageTemplate[]>([]);
   const [isLoadingTemplates, setIsLoadingTemplates] = useState(true);
   const [selectedTemplate, setSelectedTemplate] = useState<MessageTemplate | null>(null);
   const [selectedContacts, setSelectedContacts] = useState<ContactRecord[]>([]);
+  const [preSelectedContactIds, setPreSelectedContactIds] = useState<number[]>([]);
+
+  // Check for pre-selected contacts from URL params
+  useEffect(() => {
+    const contactIdsParam = searchParams.get("contactIds");
+    if (contactIdsParam) {
+      const ids = contactIdsParam.split(",").map((id) => parseInt(id, 10));
+      setPreSelectedContactIds(ids);
+      // If contacts are pre-selected, jump to step 2
+      setCurrentStep(2);
+    }
+  }, [searchParams]);
 
   // Load templates on mount
   useEffect(() => {
@@ -55,8 +69,8 @@ export function SendSMSFlowStepper() {
     }
   };
 
-  const handleContactsSelected = useCallback((contacts: ContactRecord[]) => {
-    setSelectedContacts(contacts);
+  const handleContactsSelected = useCallback((contacts: Contact[]) => {
+    setSelectedContacts(contacts as any);
   }, []);
 
   const handleTemplateSelect = (template: MessageTemplate) => {
@@ -147,7 +161,10 @@ export function SendSMSFlowStepper() {
             <div className="grid gap-6 lg:grid-cols-2">
               {/* Left: Contact Selector */}
               <div className="texture-paper card-paper rounded-lg p-8">
-                <ContactSelector onContactsSelected={handleContactsSelected} />
+                <ContactSelector
+                  onContactsSelected={handleContactsSelected}
+                  preSelectedIds={preSelectedContactIds}
+                />
               </div>
 
               {/* Right: Preview */}

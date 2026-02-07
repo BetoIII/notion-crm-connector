@@ -2,7 +2,7 @@ import { getSession } from "@/lib/auth/session";
 import { redirect } from "next/navigation";
 import { CreateCRMFlow } from "@/components/dashboard/create-crm-flow";
 import { MessageTemplatesSection } from "@/components/messages/message-templates-section";
-import { SendSMSFlow } from "@/components/messages/send-sms-flow";
+import { SendSMSFlowStepper } from "@/components/messages/send-sms-flow-stepper";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 
@@ -71,7 +71,7 @@ export default async function DashboardPage() {
           </TabsContent>
 
           <TabsContent value="send-sms" className="bg-cream texture-paper card-paper p-6 rounded-b border-2 border-t-0 border-wood-light">
-            <SendSMSFlow />
+            <SendSMSFlowStepper />
           </TabsContent>
         </Tabs>
       </div>

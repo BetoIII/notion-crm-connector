@@ -221,7 +221,7 @@ ${promptLines.join("\n\n")}`;
             </Button>
 
             <p className="mt-3 text-center text-xs text-muted-foreground">
-              Paste into Claude Desktop with the "Read and Send iMessages" connector
+              Paste into Claude Desktop after enabling the "Read and Send iMessages" connector
             </p>
           </div>
         </div>

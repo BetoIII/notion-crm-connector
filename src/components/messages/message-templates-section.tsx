@@ -1,25 +1,21 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { TemplateEditor } from "./template-editor";
-import { TemplateList } from "./template-list";
-import { Loader2 } from "lucide-react";
+import { TemplateTable } from "./template-table";
+import { TemplateEditorModal } from "./template-editor-modal";
+import { Loader2, FileText } from "lucide-react";
 import type { MessageTemplate } from "@/lib/templates/types";
 
 export function MessageTemplatesSection() {
   const [templates, setTemplates] = useState<MessageTemplate[]>([]);
   const [isLoading, setIsLoading] = useState(true);
+  const [editorOpen, setEditorOpen] = useState(false);
   const [editingTemplate, setEditingTemplate] = useState<MessageTemplate | null>(null);
 
   // Fetch templates on mount
   useEffect(() => {
     loadTemplates();
   }, []);
-
-  // Debug: Track editingTemplate changes
-  useEffect(() => {
-    console.log("editingTemplate changed:", editingTemplate);
-  }, [editingTemplate]);
 
   const loadTemplates = async () => {
     setIsLoading(true);
@@ -36,37 +32,46 @@ export function MessageTemplatesSection() {
     }
   };
 
-  const handleCreateTemplate = async (name: string, content: string) => {
-    const response = await fetch("/api/templates", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ name, content }),
-    });
-
-    const data = await response.json();
-    if (!data.success) {
-      throw new Error(data.error);
-    }
-
-    await loadTemplates();
+  const handleCreateNew = () => {
+    setEditingTemplate(null);
+    setEditorOpen(true);
   };
 
-  const handleUpdateTemplate = async (name: string, content: string) => {
-    if (!editingTemplate) return;
+  const handleEditTemplate = (template: MessageTemplate) => {
+    setEditingTemplate(template);
+    setEditorOpen(true);
+  };
 
-    const response = await fetch(`/api/templates/${editingTemplate.id}`, {
-      method: "PUT",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ name, content }),
-    });
+  const handleSaveTemplate = async (name: string, content: string) => {
+    if (editingTemplate) {
+      // Update existing template
+      const response = await fetch(`/api/templates/${editingTemplate.id}`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ name, content }),
+      });
 
-    const data = await response.json();
-    if (!data.success) {
-      throw new Error(data.error);
+      const data = await response.json();
+      if (!data.success) {
+        throw new Error(data.error);
+      }
+    } else {
+      // Create new template
+      const response = await fetch("/api/templates", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ name, content }),
+      });
+
+      const data = await response.json();
+      if (!data.success) {
+        throw new Error(data.error);
+      }
     }
 
-    setEditingTemplate(null);
     await loadTemplates();
+    setEditorOpen(false);
+    setEditingTemplate(null);
   };
 
   const handleDeleteTemplate = async (templateId: number) => {
@@ -82,48 +87,45 @@ export function MessageTemplatesSection() {
     await loadTemplates();
   };
 
-  const handleEditTemplate = (template: MessageTemplate) => {
-    console.log("handleEditTemplate called with:", template);
-    setEditingTemplate(template);
-    console.log("editingTemplate state updated");
-  };
-
   return (
     <div className="space-y-8">
       {/* Header */}
-      <div>
-        <h2 className="text-2xl font-bold">Message Templates</h2>
-        <p className="text-muted-foreground">
-          Create and manage SMS templates with personalized variables
-        </p>
-      </div>
-
-      {/* Template Editor */}
-      <div>
-        {editingTemplate ? (
-          <TemplateEditor
-            template={editingTemplate}
-            onSave={handleUpdateTemplate}
-            onCancel={() => setEditingTemplate(null)}
-          />
-        ) : (
-          <TemplateEditor onSave={handleCreateTemplate} />
-        )}
+      <div className="flex items-start gap-4">
+        <div className="p-3 rounded-lg bg-amber-glow/10 border-2 border-amber-glow/30">
+          <FileText className="h-8 w-8 text-amber-dim" />
+        </div>
+        <div>
+          <h2 className="text-3xl font-heading font-bold text-charcoal mb-2">Message Templates</h2>
+          <p className="text-smoke font-body">
+            Create and manage SMS templates with personalized variables
+          </p>
+        </div>
       </div>
 
       {/* Template List */}
       {isLoading ? (
-        <div className="flex items-center justify-center py-12">
-          <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
+        <div className="flex items-center justify-center py-20 texture-paper card-paper rounded-lg">
+          <div className="text-center space-y-4">
+            <Loader2 className="h-12 w-12 animate-spin text-wood-medium mx-auto" />
+            <p className="text-smoke font-body">Loading templates...</p>
+          </div>
         </div>
       ) : (
-        <TemplateList
+        <TemplateTable
           templates={templates}
           onEdit={handleEditTemplate}
           onDelete={handleDeleteTemplate}
-          onRefresh={loadTemplates}
+          onCreateNew={handleCreateNew}
         />
       )}
+
+      {/* Editor Modal */}
+      <TemplateEditorModal
+        open={editorOpen}
+        onOpenChange={setEditorOpen}
+        template={editingTemplate}
+        onSave={handleSaveTemplate}
+      />
     </div>
   );
 }

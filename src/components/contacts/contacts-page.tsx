@@ -6,19 +6,23 @@ import { ContactsTable } from "./contacts-table";
 import { ContactsBulkBar } from "./contacts-bulk-bar";
 import { AddContactModal } from "./add-contact-modal";
 import { EditContactModal } from "./edit-contact-modal";
-import { NotionSyncPanel } from "./notion-sync-panel";
+import { CSVImportModal } from "./csv-import-modal";
+import { ImportFromSourceModal } from "./import-from-source-modal";
 import type { Contact } from "@/lib/templates/types";
 
 export function ContactsPage() {
   const [contacts, setContacts] = useState<Contact[]>([]);
   const [total, setTotal] = useState(0);
   const [page, setPage] = useState(1);
+  const [pageSize, setPageSize] = useState(20);
   const [totalPages, setTotalPages] = useState(1);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState("");
   const [sourceFilter, setSourceFilter] = useState<string>("all");
   const [selectedIds, setSelectedIds] = useState<number[]>([]);
   const [addModalOpen, setAddModalOpen] = useState(false);
+  const [csvImportOpen, setCsvImportOpen] = useState(false);
+  const [importFromSourceOpen, setImportFromSourceOpen] = useState(false);
   const [editContact, setEditContact] = useState<Contact | null>(null);
 
   const fetchContacts = useCallback(async () => {
@@ -26,7 +30,7 @@ export function ContactsPage() {
     try {
       const params = new URLSearchParams({
         page: page.toString(),
-        limit: "25",
+        limit: pageSize.toString(),
       });
 
       if (searchTerm) {
@@ -48,7 +52,12 @@ export function ContactsPage() {
     } finally {
       setLoading(false);
     }
-  }, [page, searchTerm, sourceFilter]);
+  }, [page, pageSize, searchTerm, sourceFilter]);
+
+  const handlePageSizeChange = (newSize: number) => {
+    setPageSize(newSize);
+    setPage(1);
+  };
 
   useEffect(() => {
     fetchContacts();
@@ -125,10 +134,10 @@ export function ContactsPage() {
         sourceFilter={sourceFilter}
         onSourceFilterChange={setSourceFilter}
         total={total}
-        onAddContact={() => setAddModalOpen(true)}
+        onAddManual={() => setAddModalOpen(true)}
+        onImportFromSource={() => setImportFromSourceOpen(true)}
+        onImportCsv={() => setCsvImportOpen(true)}
       />
-
-      <NotionSyncPanel onSyncComplete={fetchContacts} />
 
       <ContactsTable
         contacts={contacts}
@@ -138,8 +147,11 @@ export function ContactsPage() {
         onSelectContact={handleSelectContact}
         onEdit={handleEdit}
         page={page}
+        pageSize={pageSize}
+        total={total}
         totalPages={totalPages}
         onPageChange={setPage}
+        onPageSizeChange={handlePageSizeChange}
       />
 
       {selectedIds.length > 0 && (
@@ -155,6 +167,18 @@ export function ContactsPage() {
         open={addModalOpen}
         onOpenChange={setAddModalOpen}
         onContactAdded={handleContactAdded}
+      />
+
+      <CSVImportModal
+        open={csvImportOpen}
+        onOpenChange={setCsvImportOpen}
+        onImportComplete={fetchContacts}
+      />
+
+      <ImportFromSourceModal
+        open={importFromSourceOpen}
+        onOpenChange={setImportFromSourceOpen}
+        onImportComplete={fetchContacts}
       />
 
       {editContact && (

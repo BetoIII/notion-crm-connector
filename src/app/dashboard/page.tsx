@@ -4,6 +4,7 @@ import { CreateCRMFlow } from "@/components/dashboard/create-crm-flow";
 import { MessageTemplatesSection } from "@/components/messages/message-templates-section";
 import { SendSMSFlowStepper } from "@/components/messages/send-sms-flow-stepper";
 import { ContactsPage } from "@/components/contacts/contacts-page";
+import { ListsPage } from "@/components/lists/lists-page";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 
@@ -46,6 +47,15 @@ export default async function DashboardPage() {
               </svg>
               Contacts
             </TabsTrigger>
+            <TabsTrigger value="lists">
+              <svg className="w-4 h-4 mr-2" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                <path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/>
+                <circle cx="9" cy="7" r="4"/>
+                <line x1="19" y1="8" x2="19" y2="14"/>
+                <line x1="22" y1="11" x2="16" y2="11"/>
+              </svg>
+              Lists
+            </TabsTrigger>
             <TabsTrigger value="crm">
               <svg className="w-4 h-4 mr-2" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
                 <rect x="3" y="8" width="18" height="12" rx="1"/>
@@ -74,6 +84,10 @@ export default async function DashboardPage() {
 
           <TabsContent value="contacts" className="bg-cream texture-paper card-paper p-6 rounded-b border-2 border-t-0 border-wood-light">
             <ContactsPage />
+          </TabsContent>
+
+          <TabsContent value="lists" className="bg-cream texture-paper card-paper p-6 rounded-b border-2 border-t-0 border-wood-light">
+            <ListsPage />
           </TabsContent>
 
           <TabsContent value="crm" className="bg-cream texture-paper card-paper p-6 rounded-b border-2 border-t-0 border-wood-light">

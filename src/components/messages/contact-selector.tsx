@@ -6,6 +6,13 @@ import { Label } from "@/components/ui/label";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Input } from "@/components/ui/input";
 import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import {
   Loader2,
   Users,
   User,
@@ -14,8 +21,16 @@ import {
   Building2,
   CheckCircle2,
   Search,
+  List,
 } from "lucide-react";
 import type { Contact } from "@/lib/templates/types";
+
+interface ContactList {
+  id: number;
+  name: string;
+  type: string;
+  member_count: number;
+}
 
 interface ContactSelectorProps {
   onContactsSelected: (contacts: Contact[]) => void;
@@ -33,10 +48,12 @@ export function ContactSelector({
   const [searchTerm, setSearchTerm] = useState("");
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState("");
+  const [lists, setLists] = useState<ContactList[]>([]);
 
-  // Load contacts on mount
+  // Load contacts and lists on mount
   useEffect(() => {
     loadContacts();
+    loadLists();
   }, []);
 
   // Debounced search
@@ -85,6 +102,34 @@ export function ContactSelector({
     }
   };
 
+  const loadLists = async () => {
+    try {
+      const response = await fetch("/api/lists");
+      const data = await response.json();
+      setLists(data.lists || []);
+    } catch (err) {
+      console.error("Failed to load lists:", err);
+    }
+  };
+
+  const handleSelectFromList = async (listId: string) => {
+    if (listId === "none") return;
+    try {
+      const response = await fetch(`/api/lists/${listId}`);
+      const data = await response.json();
+      if (data.members) {
+        const memberIds = data.members.map((m: Contact) => m.id);
+        setSelectedContactIds((prev) => {
+          const next = new Set(prev);
+          memberIds.forEach((id: number) => next.add(id));
+          return next;
+        });
+      }
+    } catch (err) {
+      console.error("Failed to load list members:", err);
+    }
+  };
+
   const toggleContact = (contactId: number) => {
     setSelectedContactIds((prev) => {
       const next = new Set(prev);
@@ -116,15 +161,34 @@ export function ContactSelector({
           </Label>
         </div>
 
-        <div className="relative">
-          <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-          <Input
-            type="text"
-            placeholder="Search contacts by name, email, or company..."
-            value={searchTerm}
-            onChange={(e) => setSearchTerm(e.target.value)}
-            className="pl-10"
-          />
+        <div className="flex gap-2">
+          <div className="relative flex-1">
+            <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+            <Input
+              type="text"
+              placeholder="Search contacts by name, email, or company..."
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+              className="pl-10"
+            />
+          </div>
+          {lists.length > 0 && (
+            <Select onValueChange={handleSelectFromList}>
+              <SelectTrigger className="w-[180px]">
+                <div className="flex items-center gap-1.5">
+                  <List className="h-3.5 w-3.5" />
+                  <span>Select from List</span>
+                </div>
+              </SelectTrigger>
+              <SelectContent>
+                {lists.map((list) => (
+                  <SelectItem key={list.id} value={list.id.toString()}>
+                    {list.name} ({list.member_count})
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          )}
         </div>
       </div>
 

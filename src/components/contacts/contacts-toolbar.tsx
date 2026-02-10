@@ -9,7 +9,21 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { Search, Plus, Link as LinkIcon } from "lucide-react";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
+import {
+  Search,
+  Plus,
+  ChevronDown,
+  Database,
+  FileSpreadsheet,
+  Pencil,
+  Download,
+} from "lucide-react";
 import Link from "next/link";
 
 interface ContactsToolbarProps {
@@ -18,7 +32,9 @@ interface ContactsToolbarProps {
   sourceFilter: string;
   onSourceFilterChange: (value: string) => void;
   total: number;
-  onAddContact: () => void;
+  onAddManual: () => void;
+  onImportFromSource: () => void;
+  onImportCsv: () => void;
 }
 
 export function ContactsToolbar({
@@ -27,7 +43,9 @@ export function ContactsToolbar({
   sourceFilter,
   onSourceFilterChange,
   total,
-  onAddContact,
+  onAddManual,
+  onImportFromSource,
+  onImportCsv,
 }: ContactsToolbarProps) {
   return (
     <div className="space-y-4">
@@ -42,16 +60,58 @@ export function ContactsToolbar({
           </p>
         </div>
         <div className="flex gap-2">
-          <Link href="/dashboard/notion-connect">
-            <Button variant="outline" className="gap-2">
-              <LinkIcon className="h-4 w-4" />
-              Connect Notion
-            </Button>
-          </Link>
-          <Button onClick={onAddContact} className="gap-2">
-            <Plus className="h-4 w-4" />
-            Add Contact
-          </Button>
+          {/* Connect Source Dropdown */}
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button variant="outline" className="gap-2">
+                <Download className="h-4 w-4" />
+                Connect Source
+                <ChevronDown className="h-3 w-3" />
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end">
+              <Link href="/dashboard/notion-connect">
+                <DropdownMenuItem className="cursor-pointer gap-2">
+                  <Database className="h-4 w-4" />
+                  Notion Database
+                </DropdownMenuItem>
+              </Link>
+              <DropdownMenuItem
+                className="cursor-pointer gap-2"
+                onClick={onImportCsv}
+              >
+                <FileSpreadsheet className="h-4 w-4" />
+                CSV File
+              </DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
+
+          {/* Add Contact Dropdown */}
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button className="gap-2">
+                <Plus className="h-4 w-4" />
+                Add Contact
+                <ChevronDown className="h-3 w-3" />
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end">
+              <DropdownMenuItem
+                className="cursor-pointer gap-2"
+                onClick={onAddManual}
+              >
+                <Pencil className="h-4 w-4" />
+                Add Manually
+              </DropdownMenuItem>
+              <DropdownMenuItem
+                className="cursor-pointer gap-2"
+                onClick={onImportFromSource}
+              >
+                <Database className="h-4 w-4" />
+                Import from Source
+              </DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
         </div>
       </div>
 

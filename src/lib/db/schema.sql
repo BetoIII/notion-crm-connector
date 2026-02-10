@@ -57,3 +57,27 @@ CREATE TABLE IF NOT EXISTS notion_connected_databases (
   last_synced_at INTEGER,
   created_at INTEGER NOT NULL DEFAULT (strftime('%s','now'))
 );
+
+-- Contact Lists Table
+CREATE TABLE IF NOT EXISTS contact_lists (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  name TEXT NOT NULL,
+  type TEXT NOT NULL DEFAULT 'people',   -- 'people' or 'companies'
+  description TEXT,
+  created_at INTEGER NOT NULL DEFAULT (strftime('%s', 'now')),
+  updated_at INTEGER NOT NULL DEFAULT (strftime('%s', 'now'))
+);
+
+-- Contact List Members Junction Table
+CREATE TABLE IF NOT EXISTS contact_list_members (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  list_id INTEGER NOT NULL,
+  contact_id INTEGER NOT NULL,
+  added_at INTEGER NOT NULL DEFAULT (strftime('%s', 'now')),
+  FOREIGN KEY (list_id) REFERENCES contact_lists(id) ON DELETE CASCADE,
+  FOREIGN KEY (contact_id) REFERENCES contacts(id) ON DELETE CASCADE,
+  UNIQUE(list_id, contact_id)
+);
+
+CREATE INDEX IF NOT EXISTS idx_list_members_list ON contact_list_members(list_id);
+CREATE INDEX IF NOT EXISTS idx_list_members_contact ON contact_list_members(contact_id);

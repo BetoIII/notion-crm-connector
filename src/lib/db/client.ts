@@ -466,3 +466,194 @@ export const connectedDBsDB = {
     return result.changes > 0;
   },
 };
+
+/**
+ * Contact list operations
+ */
+export const listDB = {
+  /**
+   * Get all lists with member counts
+   */
+  getAll(options?: { type?: string; search?: string }) {
+    const db = getDatabase();
+    let query = `
+      SELECT cl.*, COUNT(clm.id) as member_count
+      FROM contact_lists cl
+      LEFT JOIN contact_list_members clm ON cl.id = clm.list_id
+      WHERE 1=1
+    `;
+    const params: any[] = [];
+
+    if (options?.type) {
+      query += " AND cl.type = ?";
+      params.push(options.type);
+    }
+
+    if (options?.search) {
+      query += " AND cl.name LIKE ?";
+      params.push(`%${options.search}%`);
+    }
+
+    query += " GROUP BY cl.id ORDER BY cl.updated_at DESC";
+    return db.prepare(query).all(...params);
+  },
+
+  /**
+   * Get list by ID with member count
+   */
+  getById(id: number) {
+    const db = getDatabase();
+    return db.prepare(`
+      SELECT cl.*, COUNT(clm.id) as member_count
+      FROM contact_lists cl
+      LEFT JOIN contact_list_members clm ON cl.id = clm.list_id
+      WHERE cl.id = ?
+      GROUP BY cl.id
+    `).get(id);
+  },
+
+  /**
+   * Create a new list
+   */
+  create(name: string, type: string, description?: string) {
+    const db = getDatabase();
+    const now = Math.floor(Date.now() / 1000);
+    const result = db.prepare(
+      `INSERT INTO contact_lists (name, type, description, created_at, updated_at)
+       VALUES (?, ?, ?, ?, ?)`
+    ).run(name, type, description || null, now, now);
+    return result.lastInsertRowid;
+  },
+
+  /**
+   * Update a list
+   */
+  update(id: number, name: string, description?: string) {
+    const db = getDatabase();
+    const now = Math.floor(Date.now() / 1000);
+    const result = db.prepare(
+      `UPDATE contact_lists SET name = ?, description = ?, updated_at = ? WHERE id = ?`
+    ).run(name, description || null, now, id);
+    return result.changes > 0;
+  },
+
+  /**
+   * Delete a list (cascade deletes members)
+   */
+  delete(id: number) {
+    const db = getDatabase();
+    const result = db.prepare("DELETE FROM contact_lists WHERE id = ?").run(id);
+    return result.changes > 0;
+  },
+
+  /**
+   * Add contacts to a list
+   */
+  addMembers(listId: number, contactIds: number[]) {
+    const db = getDatabase();
+    const now = Math.floor(Date.now() / 1000);
+    const insert = db.prepare(
+      `INSERT OR IGNORE INTO contact_list_members (list_id, contact_id, added_at)
+       VALUES (?, ?, ?)`
+    );
+
+    const addMany = db.transaction((ids: number[]) => {
+      let added = 0;
+      for (const contactId of ids) {
+        const result = insert.run(listId, contactId, now);
+        if (result.changes > 0) added++;
+      }
+      return added;
+    });
+
+    const added = addMany(contactIds);
+
+    // Update list's updated_at
+    db.prepare("UPDATE contact_lists SET updated_at = ? WHERE id = ?").run(now, listId);
+
+    return added;
+  },
+
+  /**
+   * Remove contacts from a list
+   */
+  removeMembers(listId: number, contactIds: number[]) {
+    const db = getDatabase();
+    const now = Math.floor(Date.now() / 1000);
+    const remove = db.prepare(
+      "DELETE FROM contact_list_members WHERE list_id = ? AND contact_id = ?"
+    );
+
+    const removeMany = db.transaction((ids: number[]) => {
+      let removed = 0;
+      for (const contactId of ids) {
+        const result = remove.run(listId, contactId);
+        if (result.changes > 0) removed++;
+      }
+      return removed;
+    });
+
+    const removed = removeMany(contactIds);
+
+    // Update list's updated_at
+    db.prepare("UPDATE contact_lists SET updated_at = ? WHERE id = ?").run(now, listId);
+
+    return removed;
+  },
+
+  /**
+   * Get members of a list with contact details
+   */
+  getMembers(listId: number, options?: { search?: string; limit?: number; offset?: number }) {
+    const db = getDatabase();
+    let query = `
+      SELECT c.*, clm.added_at as list_added_at
+      FROM contact_list_members clm
+      JOIN contacts c ON clm.contact_id = c.id
+      WHERE clm.list_id = ?
+    `;
+    const params: any[] = [listId];
+
+    if (options?.search) {
+      query += " AND (c.name LIKE ? OR c.email LIKE ? OR c.company LIKE ?)";
+      const searchTerm = `%${options.search}%`;
+      params.push(searchTerm, searchTerm, searchTerm);
+    }
+
+    query += " ORDER BY clm.added_at DESC";
+
+    if (options?.limit) {
+      query += " LIMIT ?";
+      params.push(options.limit);
+    }
+
+    if (options?.offset) {
+      query += " OFFSET ?";
+      params.push(options.offset);
+    }
+
+    return db.prepare(query).all(...params);
+  },
+
+  /**
+   * Get member count for a list
+   */
+  getMemberCount(listId: number) {
+    const db = getDatabase();
+    const result = db.prepare(
+      "SELECT COUNT(*) as count FROM contact_list_members WHERE list_id = ?"
+    ).get(listId) as { count: number };
+    return result.count;
+  },
+
+  /**
+   * Get member IDs for a list
+   */
+  getMemberIds(listId: number) {
+    const db = getDatabase();
+    const rows = db.prepare(
+      "SELECT contact_id FROM contact_list_members WHERE list_id = ?"
+    ).all(listId) as { contact_id: number }[];
+    return rows.map((r) => r.contact_id);
+  },
+};

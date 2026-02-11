@@ -90,12 +90,12 @@ export default function Home() {
           </h1>
 
           <p className="mx-auto mb-3 max-w-2xl text-lg font-body text-smoke sm:text-xl">
-            Create and manage personal CRMs in your Notion workspace
+            Manage your Notion CRM with AI-powered tools and contact management
           </p>
 
           <p className="mx-auto mb-12 max-w-xl text-sm font-body text-smoke/80">
-            Build structured databases for accounts, contacts, and opportunities—all
-            connected with intelligent relations
+            26 MCP tools for accounts, contacts, opportunities, and activities—plus
+            SMS templates, contact lists, and pipeline analytics
           </p>
 
           {/* Error Display */}
@@ -116,10 +116,10 @@ export default function Home() {
         {/* Feature Pills - Office Sign Style */}
         <div className="mt-16 flex flex-wrap justify-center gap-4">
           {[
-            "3 Connected Databases",
-            "Smart Relations",
-            "Customizable Schema",
-            "Real-time Creation",
+            "4 CRM Databases",
+            "MCP-Powered Intelligence",
+            "Contact Manager & SMS",
+            "Pipeline Analytics",
           ].map((feature, i) => (
             <div
               key={feature}

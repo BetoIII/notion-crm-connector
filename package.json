@@ -4,7 +4,11 @@
   "private": true,
   "scripts": {
     "dev": "next dev --turbopack",
+    "dev:all": "concurrently --names next,mcp --prefix-colors blue,green \"next dev --turbopack\" \"cd mcp-server && npm run dev\"",
     "build": "next build",
+    "build:mcp": "cd mcp-server && npm run build",
+    "build:all": "npm run build:mcp && npm run build",
+    "setup:mcp": "cd mcp-server && npm install && npm run build",
     "start": "next start",
     "lint": "next lint"
   },
@@ -39,6 +43,7 @@
   "devDependencies": {
     "@types/better-sqlite3": "^7.6.13",
     "autoprefixer": "^10.4.24",
+    "concurrently": "^9.2.1",
     "eslint": "^9.39.2",
     "eslint-config-next": "^16.1.6",
     "postcss": "^8.5.6",

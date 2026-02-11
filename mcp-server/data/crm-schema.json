@@ -1,0 +1,399 @@
+{
+  "version": "2.6.0",
+  "last_updated": "2025-12-09T00:00:00.000Z",
+  "last_validated": "2026-01-05T00:00:00.000Z",
+  "validation_config": {
+    "max_stale_days": 7,
+    "auto_heal": true
+  },
+  "note": "Auto-generated from Notion workspace. Manual aliases added for user convenience.",
+  "important_format_notes": {
+    "page_id_format": "ALWAYS use UUID format with dashes (8-4-4-4-12). Convert 32-char Notion URL IDs by inserting dashes at positions 8, 12, 16, 20.",
+    "example_conversion": {
+      "from_url": "notion.so/Page-Name-2b7e833b5a498124936af8eb357666fe",
+      "raw_id": "2b7e833b5a498124936af8eb357666fe",
+      "correct_uuid": "2b7e833b-5a49-8124-936a-f8eb357666fe"
+    },
+    "relation_format": "Relations require page IDs in UUID format: { \"relation\": [{ \"id\": \"xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx\" }] }",
+    "database_vs_collection_ids": {
+      "explanation": "Notion databases have TWO identifiers: database_id (for API operations) and collection_id (internal data source). These may differ.",
+      "use_database_id_for": ["create_page parent", "query_database", "update_page"],
+      "collection_id_appears_in": ["relation data sources", "collection:// URLs"],
+      "note": "When MCP fetch returns 404, use query_database instead - it's more reliable for database validation."
+    }
+  },
+  "property_aliases": {
+    "_description": "Maps user-friendly names to actual Notion property names. Use these to resolve user input before API calls.",
+    "Contact": "Contacts",
+    "contact": "Contacts",
+    "contacts": "Contacts",
+    "Opportunity": "Opportunity",
+    "opportunity": "Opportunity",
+    "opportunities": "Opportunity",
+    "Company": "Company",
+    "company": "Company",
+    "companies": "Company",
+    "Account": "Account",
+    "account": "Account",
+    "accounts": "Account"
+  },
+  "select_option_aliases": {
+    "_description": "Maps plain text to emoji-prefixed Notion select values. ALWAYS resolve user input through these before API calls.",
+    "Buying Role": {
+      "Champion": "🎯 Champion",
+      "champion": "🎯 Champion",
+      "Economic Buyer": "💰 Economic Buyer",
+      "economic buyer": "💰 Economic Buyer",
+      "buyer": "💰 Economic Buyer",
+      "Technical Buyer": "🔧 Technical Buyer",
+      "technical buyer": "🔧 Technical Buyer",
+      "technical": "🔧 Technical Buyer",
+      "Influencer": "📋 Influencer",
+      "influencer": "📋 Influencer",
+      "Legal/Compliance": "⚖️ Legal/Compliance",
+      "legal/compliance": "⚖️ Legal/Compliance",
+      "legal": "⚖️ Legal/Compliance",
+      "compliance": "⚖️ Legal/Compliance",
+      "End User": "👤 End User",
+      "end user": "👤 End User",
+      "user": "👤 End User",
+      "Blocker": "🚫 Blocker",
+      "blocker": "🚫 Blocker"
+    },
+    "Engagement Level": {
+      "Hot": "🔥 Hot",
+      "hot": "🔥 Hot",
+      "Engaged": "✅ Engaged",
+      "engaged": "✅ Engaged",
+      "Neutral": "😐 Neutral",
+      "neutral": "😐 Neutral",
+      "Cold": "❄️ Cold",
+      "cold": "❄️ Cold"
+    }
+  },
+  "database_name_mappings": {
+    "contacts": [
+      "Contacts",
+      "Contact Database"
+    ],
+    "accounts": [
+      "Companies",
+      "Companies (Accounts)",
+      "🏢 Accounts",
+      "Accounts"
+    ],
+    "opportunities": [
+      "Opportunities",
+      "💼 Opportunities"
+    ]
+  },
+  "databases": {
+    "accounts": {
+      "id": "2a4e833b-5a49-8131-b2ea-000b8ed052ac",
+      "collection_id": "2a4e833b-5a49-8131-b2ea-000b8ed052ac",
+      "name": "🗃️ Accounts (Companies)",
+      "display_name": "🗃️ Accounts (Companies)",
+      "properties": {
+        "Company  Name": {
+          "id": "title",
+          "type": "title"
+        },
+        "Company Type": {
+          "id": "eDptYQ",
+          "type": "multi_select",
+          "options": [
+            "Mortgage Servicer",
+            "Listings",
+            "Lead Gen",
+            "Leasing",
+            "Private Lender",
+            "Loan Originator",
+            "Property Manager",
+            "Mobile Homes",
+            "Mortgage Originator",
+            "Mortgage Broker",
+            "RE Brokerage",
+            "HELOCs",
+            "RE Tech Vendor",
+            "Wholesaler",
+            "Refis",
+            "Developer",
+            "Credit/Debt",
+            "Retail",
+            "Homebuilder",
+            "Multifamily",
+            "Operator",
+            "SFR",
+            "Commercial"
+          ]
+        },
+        "Segment": {
+          "id": "Z3FEZQ",
+          "type": "select",
+          "options": [
+            "SMB",
+            "Enterprise",
+            "Mid-Market"
+          ]
+        },
+        "Address": {
+          "id": "Address",
+          "type": "rich_text"
+        },
+        "City": {
+          "id": "Oj1vOw",
+          "type": "select",
+          "options": [
+            "San Francisco",
+            "Los Angeles",
+            "New York",
+            "Seattle",
+            "Austin",
+            "Miami",
+            "San Jose",
+            "Las Vegas"
+          ]
+        },
+        "State": {
+          "id": "S0RMcA",
+          "type": "select",
+          "options": [
+            "CA",
+            "NY",
+            "WA",
+            "TX",
+            "FL",
+            "NV"
+          ]
+        },
+        "Country": {
+          "id": "RTtWVA",
+          "type": "select",
+          "options": [
+            "USA"
+          ]
+        },
+        "LinkedIn": {
+          "id": "LinkedIn",
+          "type": "url"
+        },
+        "Notes": {
+          "id": "Notes",
+          "type": "rich_text"
+        },
+        "Acct Lead": {
+          "id": "Acct Lead",
+          "type": "people"
+        },
+        "⏩ Contact Database": {
+          "id": "Ylp6YQ",
+          "type": "relation"
+        },
+        "💼 Opportunities": {
+          "id": "opportunities_relation",
+          "type": "relation"
+        }
+      }
+    },
+    "contacts": {
+      "id": "2a4e833b-5a49-81dd-a36c-faa344cc523f",
+      "collection_id": "2a4e833b-5a49-81f4-9868-000ba64b6240",
+      "name": "⏩ Contact Database",
+      "display_name": "⏩ Contact Database",
+      "properties": {
+        "Contact Name": {
+          "id": "title",
+          "type": "title"
+        },
+        "Title": {
+          "id": "Title",
+          "type": "rich_text"
+        },
+        "Contact Email": {
+          "id": "Contact Email",
+          "type": "email"
+        },
+        "Contact Phone": {
+          "id": "Contact Phone",
+          "type": "phone_number"
+        },
+        "LinkedIn": {
+          "id": "LinkedIn",
+          "type": "url"
+        },
+        "Buying Role": {
+          "id": "WTtLUQ",
+          "type": "select",
+          "options": [
+            "🎯 Champion",
+            "💰 Economic Buyer",
+            "🔧 Technical Buyer",
+            "📋 Influencer",
+            "⚖️ Legal/Compliance",
+            "👤 End User",
+            "🚫 Blocker"
+          ]
+        },
+        "Engagement Level": {
+          "id": "c1BAXg",
+          "type": "select",
+          "options": [
+            "🔥 Hot",
+            "✅ Engaged",
+            "😐 Neutral",
+            "❄️ Cold"
+          ]
+        },
+        "Source": {
+          "id": "aENheQ",
+          "type": "multi_select",
+          "options": [
+            "SREC",
+            "Lookalikes - Irvine",
+            "IMN West '25",
+            "Spire ABM",
+            "Lookalikes - NYC"
+          ]
+        },
+        "Last Contact": {
+          "id": "Last Contact",
+          "type": "date"
+        },
+        "Acct Lead": {
+          "id": "Acct Lead",
+          "type": "people"
+        },
+        "Company": {
+          "id": "ZE1aPQ",
+          "type": "relation"
+        },
+        "💼 Opportunities": {
+          "id": "opportunities_relation",
+          "type": "relation"
+        }
+      }
+    },
+    "opportunities": {
+      "id": "e853860d-5c8f-4821-a7f2-5e6ea7f32b06",
+      "collection_id": "e853860d-5c8f-4821-a7f2-5e6ea7f32b06",
+      "name": "🏆 Opportunities (Pipeline)",
+      "display_name": "🏆 Opportunities (Pipeline)",
+      "properties": {
+        "Name": {
+          "id": "title",
+          "type": "title"
+        },
+        "Stage": {
+          "id": "UV14QA",
+          "type": "select",
+          "options": [
+            "Discovery",
+            "Qualified",
+            "Demo/Pilot",
+            "Proposal",
+            "Negotiating",
+            "Contracting",
+            "Closed Won",
+            "Closed Lost"
+          ]
+        },
+        "Opportunity Type": {
+          "id": "bjtcVg",
+          "type": "select",
+          "options": [
+            "New Business",
+            "Expansion",
+            "Renewal"
+          ]
+        },
+        "Product/Service": {
+          "id": "a3ZpRw",
+          "type": "multi_select",
+          "options": [
+            "Lead Gen",
+            "Retention",
+            "Listings",
+            "Appointment Setting"
+          ]
+        },
+        "Lead Source": {
+          "id": "X1FbUQ",
+          "type": "multi_select",
+          "options": [
+            "SREC",
+            "Lookalikes - Irvine",
+            "IMN West '25",
+            "Spire ABM",
+            "Inbound",
+            "Referral",
+            "Outbound",
+            "Partner"
+          ]
+        },
+        "Lost Reason": {
+          "id": "al5mYw",
+          "type": "select",
+          "options": [
+            "Price",
+            "No Budget",
+            "Timing",
+            "Competitor"
+          ]
+        },
+        "Deal Value": {
+          "id": "Deal Value",
+          "type": "number"
+        },
+        "ARR": {
+          "id": "ARR",
+          "type": "number"
+        },
+        "MRR": {
+          "id": "MRR",
+          "type": "number"
+        },
+        "Close Probability": {
+          "id": "Close Probability",
+          "type": "number"
+        },
+        "Contract Length": {
+          "id": "Contract Length",
+          "type": "number"
+        },
+        "Expected Close Date": {
+          "id": "Expected Close Date",
+          "type": "date"
+        },
+        "Contract Start Date": {
+          "id": "Contract Start Date",
+          "type": "date"
+        },
+        "Next Step": {
+          "id": "Next Step",
+          "type": "rich_text"
+        },
+        "Owner": {
+          "id": "Owner",
+          "type": "people"
+        },
+        "Account": {
+          "id": "Account",
+          "type": "relation"
+        },
+        "Buying Committee": {
+          "id": "Buying Committee",
+          "type": "relation"
+        },
+        "Champion": {
+          "id": "Champion",
+          "type": "relation"
+        }
+      }
+    }
+  },
+  "relationships": {
+    "contact_to_account": "Many contacts belong to one account (Company property)",
+    "contact_to_opportunity": "Contacts linked via Buying Committee/Champion (many-to-many)",
+    "opportunity_to_account": "Each opportunity belongs to one account (Account property)"
+  }
+}

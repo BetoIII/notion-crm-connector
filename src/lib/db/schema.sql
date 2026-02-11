@@ -81,3 +81,31 @@ CREATE TABLE IF NOT EXISTS contact_list_members (
 
 CREATE INDEX IF NOT EXISTS idx_list_members_list ON contact_list_members(list_id);
 CREATE INDEX IF NOT EXISTS idx_list_members_contact ON contact_list_members(contact_id);
+
+-- Activities Table
+CREATE TABLE IF NOT EXISTS activities (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  contact_id INTEGER NOT NULL,
+  notion_activity_id TEXT,
+  type TEXT NOT NULL DEFAULT 'SMS',
+  description TEXT NOT NULL,
+  notes TEXT,
+  status TEXT DEFAULT 'Completed',
+  activity_date INTEGER NOT NULL,
+  synced_to_notion INTEGER DEFAULT 0,
+  created_at INTEGER NOT NULL DEFAULT (strftime('%s','now')),
+  updated_at INTEGER NOT NULL DEFAULT (strftime('%s','now')),
+  FOREIGN KEY (contact_id) REFERENCES contacts(id) ON DELETE CASCADE
+);
+
+CREATE INDEX IF NOT EXISTS idx_activities_contact ON activities(contact_id);
+CREATE UNIQUE INDEX IF NOT EXISTS idx_activities_notion_id ON activities(notion_activity_id) WHERE notion_activity_id IS NOT NULL;
+CREATE INDEX IF NOT EXISTS idx_activities_date ON activities(activity_date DESC);
+
+-- Activity Sync Log
+CREATE TABLE IF NOT EXISTS activity_sync_log (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  contact_id INTEGER NOT NULL UNIQUE,
+  last_synced_at INTEGER NOT NULL,
+  FOREIGN KEY (contact_id) REFERENCES contacts(id) ON DELETE CASCADE
+);

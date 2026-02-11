@@ -8,6 +8,7 @@ import { AddContactModal } from "./add-contact-modal";
 import { EditContactModal } from "./edit-contact-modal";
 import { CSVImportModal } from "./csv-import-modal";
 import { ImportFromSourceModal } from "./import-from-source-modal";
+import { ContactDetailModal } from "./contact-detail-modal";
 import type { Contact } from "@/lib/templates/types";
 
 export function ContactsPage() {
@@ -24,6 +25,7 @@ export function ContactsPage() {
   const [csvImportOpen, setCsvImportOpen] = useState(false);
   const [importFromSourceOpen, setImportFromSourceOpen] = useState(false);
   const [editContact, setEditContact] = useState<Contact | null>(null);
+  const [detailContact, setDetailContact] = useState<Contact | null>(null);
 
   const fetchContacts = useCallback(async () => {
     setLoading(true);
@@ -146,6 +148,7 @@ export function ContactsPage() {
         onSelectAll={handleSelectAll}
         onSelectContact={handleSelectContact}
         onEdit={handleEdit}
+        onRowClick={setDetailContact}
         page={page}
         pageSize={pageSize}
         total={total}
@@ -189,6 +192,16 @@ export function ContactsPage() {
           onContactUpdated={handleContactUpdated}
         />
       )}
+
+      <ContactDetailModal
+        contact={detailContact}
+        open={!!detailContact}
+        onOpenChange={(open) => !open && setDetailContact(null)}
+        onEdit={(contact) => {
+          setDetailContact(null);
+          setEditContact(contact);
+        }}
+      />
     </div>
   );
 }

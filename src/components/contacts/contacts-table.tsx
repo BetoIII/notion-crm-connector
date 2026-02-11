@@ -20,6 +20,7 @@ interface ContactsTableProps {
   onSelectAll: (checked: boolean) => void;
   onSelectContact: (id: number, checked: boolean) => void;
   onEdit: (contact: Contact) => void;
+  onRowClick?: (contact: Contact) => void;
   page: number;
   pageSize: number;
   total: number;
@@ -35,6 +36,7 @@ export function ContactsTable({
   onSelectAll,
   onSelectContact,
   onEdit,
+  onRowClick,
   page,
   pageSize,
   total,
@@ -123,11 +125,12 @@ export function ContactsTable({
               {contacts.map((contact) => (
                 <tr
                   key={contact.id}
-                  className={`group hover:bg-amber/5 ${
+                  className={`group hover:bg-amber/5 cursor-pointer ${
                     selectedIds.includes(contact.id) ? "bg-amber/10" : ""
                   }`}
+                  onClick={() => onRowClick?.(contact)}
                 >
-                  <td className="px-4 py-3">
+                  <td className="px-4 py-3" onClick={(e) => e.stopPropagation()}>
                     <Checkbox
                       checked={selectedIds.includes(contact.id)}
                       onCheckedChange={(checked) =>
@@ -161,7 +164,7 @@ export function ContactsTable({
                       {contact.source}
                     </Badge>
                   </td>
-                  <td className="px-4 py-3">
+                  <td className="px-4 py-3" onClick={(e) => e.stopPropagation()}>
                     <div className="flex justify-center gap-1">
                       <Button
                         variant="ghost"

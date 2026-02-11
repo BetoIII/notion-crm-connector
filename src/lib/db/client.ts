@@ -468,6 +468,121 @@ export const connectedDBsDB = {
 };
 
 /**
+ * Activity operations
+ */
+export const activityDB = {
+  getByContact(contactId: number) {
+    const db = getDatabase();
+    return db.prepare(
+      "SELECT * FROM activities WHERE contact_id = ? ORDER BY activity_date DESC"
+    ).all(contactId);
+  },
+
+  create(activity: {
+    contact_id: number;
+    type?: string;
+    description: string;
+    notes?: string;
+    status?: string;
+    activity_date: number;
+    notion_activity_id?: string;
+    synced_to_notion?: number;
+  }) {
+    const db = getDatabase();
+    const now = Math.floor(Date.now() / 1000);
+    const result = db.prepare(
+      `INSERT INTO activities
+       (contact_id, type, description, notes, status, activity_date,
+        notion_activity_id, synced_to_notion, created_at, updated_at)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
+    ).run(
+      activity.contact_id,
+      activity.type || 'SMS',
+      activity.description,
+      activity.notes || null,
+      activity.status || 'Completed',
+      activity.activity_date,
+      activity.notion_activity_id || null,
+      activity.synced_to_notion || 0,
+      now,
+      now
+    );
+    return Number(result.lastInsertRowid);
+  },
+
+  upsertFromNotion(activities: Array<{
+    contact_id: number;
+    notion_activity_id: string;
+    type: string;
+    description: string;
+    notes?: string;
+    status?: string;
+    activity_date: number;
+  }>) {
+    const db = getDatabase();
+    const now = Math.floor(Date.now() / 1000);
+
+    const upsert = db.prepare(
+      `INSERT INTO activities
+       (contact_id, notion_activity_id, type, description, notes, status,
+        activity_date, synced_to_notion, created_at, updated_at)
+       VALUES (?, ?, ?, ?, ?, ?, ?, 1, ?, ?)
+       ON CONFLICT(notion_activity_id)
+       DO UPDATE SET
+         description = excluded.description,
+         notes = excluded.notes,
+         status = excluded.status,
+         activity_date = excluded.activity_date,
+         updated_at = excluded.updated_at`
+    );
+
+    const upsertMany = db.transaction((items: typeof activities) => {
+      for (const a of items) {
+        upsert.run(
+          a.contact_id,
+          a.notion_activity_id,
+          a.type,
+          a.description,
+          a.notes || null,
+          a.status || 'Completed',
+          a.activity_date,
+          now,
+          now
+        );
+      }
+    });
+
+    upsertMany(activities);
+  },
+
+  markSyncedToNotion(id: number, notionPageId: string) {
+    const db = getDatabase();
+    const now = Math.floor(Date.now() / 1000);
+    db.prepare(
+      "UPDATE activities SET synced_to_notion = 1, notion_activity_id = ?, updated_at = ? WHERE id = ?"
+    ).run(notionPageId, now, id);
+  },
+
+  getLastSyncTime(contactId: number): number | null {
+    const db = getDatabase();
+    const row = db.prepare(
+      "SELECT last_synced_at FROM activity_sync_log WHERE contact_id = ?"
+    ).get(contactId) as { last_synced_at: number } | undefined;
+    return row?.last_synced_at ?? null;
+  },
+
+  updateSyncTime(contactId: number) {
+    const db = getDatabase();
+    const now = Math.floor(Date.now() / 1000);
+    db.prepare(
+      `INSERT INTO activity_sync_log (contact_id, last_synced_at)
+       VALUES (?, ?)
+       ON CONFLICT(contact_id) DO UPDATE SET last_synced_at = excluded.last_synced_at`
+    ).run(contactId, now);
+  },
+};
+
+/**
  * Contact list operations
  */
 export const listDB = {

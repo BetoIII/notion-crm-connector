@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
-import { Check, Copy, AlertTriangle, Send, CheckCircle2, AlertCircle, XCircle } from "lucide-react";
+import { Check, Copy, AlertTriangle, Send, CheckCircle2, AlertCircle, XCircle, Loader2 } from "lucide-react";
 import { replaceVariables, validateVariables } from "@/lib/templates/parser";
 import type { MessageTemplate, ContactRecord } from "@/lib/templates/types";
 
@@ -25,6 +25,9 @@ export function PromptGeneratorEnhanced({
     }>
   >([]);
   const [promptCopied, setPromptCopied] = useState(false);
+  const [showConfirmSent, setShowConfirmSent] = useState(false);
+  const [confirmingActivity, setConfirmingActivity] = useState(false);
+  const [activityLogged, setActivityLogged] = useState(false);
 
   useEffect(() => {
     if (template && contacts.length > 0) {
@@ -66,9 +69,43 @@ ${promptLines.join("\n\n")}`;
     try {
       await navigator.clipboard.writeText(prompt);
       setPromptCopied(true);
+      setShowConfirmSent(true);
+      setActivityLogged(false);
       setTimeout(() => setPromptCopied(false), 2000);
     } catch (err) {
       console.error("Failed to copy:", err);
+    }
+  };
+
+  const handleConfirmSent = async () => {
+    setConfirmingActivity(true);
+    try {
+      const validPrompts = generatedPrompts.filter((p) => p.contact.phone);
+      const messages = validPrompts.map((p) => ({
+        contact_id: typeof p.contact.id === "number" ? p.contact.id : parseInt(String(p.contact.id), 10),
+        contact_name: p.contact.contact_name || "Unknown",
+        phone: p.contact.phone || "",
+        message: p.message,
+        template_id: template.id,
+        source_id: p.contact.source_id || null,
+        source_url: p.contact.source_url || p.contact.url || null,
+      }));
+
+      const res = await fetch("/api/activities/log-sms", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ messages }),
+      });
+
+      if (res.ok) {
+        setActivityLogged(true);
+        setShowConfirmSent(false);
+        onMessageLogged?.();
+      }
+    } catch (err) {
+      console.error("Failed to log activities:", err);
+    } finally {
+      setConfirmingActivity(false);
     }
   };
 
@@ -211,8 +248,40 @@ ${promptLines.join("\n\n")}`;
             </div>
 
             <p className="mt-4 text-center text-xs text-smoke font-body">
-              Paste into Claude Desktop with the "Read and Send iMessages" connector
+              Paste into Claude Desktop after enabling the &quot;Read and Send iMessages&quot; connector
             </p>
+
+            {/* Confirm Sent / Activity Logged */}
+            {showConfirmSent && !activityLogged && (
+              <div className="mt-4 flex justify-center">
+                <Button
+                  onClick={handleConfirmSent}
+                  disabled={confirmingActivity}
+                  variant="outline"
+                  size="sm"
+                  className="border-olive text-olive hover:bg-olive hover:text-cream"
+                >
+                  {confirmingActivity ? (
+                    <>
+                      <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                      Logging...
+                    </>
+                  ) : (
+                    <>
+                      <CheckCircle2 className="h-4 w-4 mr-2" />
+                      Confirm Sent
+                    </>
+                  )}
+                </Button>
+              </div>
+            )}
+
+            {activityLogged && (
+              <div className="mt-4 flex items-center justify-center gap-2 text-olive">
+                <CheckCircle2 className="h-4 w-4" />
+                <span className="text-sm font-body">Activities logged</span>
+              </div>
+            )}
           </div>
         </div>
       )}

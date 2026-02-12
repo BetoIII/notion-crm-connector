@@ -2,7 +2,18 @@
 
 ## Context
 
-The current Notion CRM Connector is a full Next.js web application (Next.js 15, SQLite, React, shadcn/ui) that provides CRM functionality integrated with Notion. The goal is to **completely eliminate the Next.js app** and convert all functionality into a **Claude Code plugin** that users install and use entirely within Claude Desktop (Co-work tab) or Claude Code CLI. This analysis maps every feature to plugin primitives, identifies UX gaps, and proposes solutions including the Playground plugin for visual workflows.
+The current Notion CRM Connector is a full Next.js web application (Next.js 15, SQLite, React, shadcn/ui) that provides CRM functionality integrated with Notion. The goal is to **completely eliminate the Next.js app** and convert all functionality into a **Claude Code plugin** that users install and use entirely within Claude Desktop (Co-work tab). This analysis maps every feature to plugin primitives, identifies UX gaps, and proposes solutions including the Playground plugin for visual workflows.
+
+---
+
+## Design Decisions
+
+- **Auth**: `NOTION_API_KEY` env var (internal integration token). No OAuth.
+- **Storage**: **Notion-only**. No SQLite. All data (contacts, templates, lists, activities) lives in the user's Notion workspace.
+- **MCP Server**: Single merged server. All Notion CRM tools in one process.
+- **Required Config**: Two env vars — `NOTION_API_KEY` + `NOTION_CRM_PAGE_ID` (parent page where all CRM databases live).
+- **Primary Client**: Claude Desktop Co-work tab. Skills optimized for conversational Co-work UX.
+- **Scope simplification**: Accounts/Companies database **removed**. CRM is Contact-centric. Company is a property on Contacts, not a separate database.
 
 ---
 
@@ -19,6 +30,77 @@ The current Notion CRM Connector is a full Next.js web application (Next.js 15, 
 
 ---
 
+## New Notion Database Architecture
+
+All databases live under a single **CRM Parent Page** (identified by `NOTION_CRM_PAGE_ID`). The plugin creates these databases on the user's behalf during `/setup`.
+
+### Databases (4 total)
+
+| Database | Purpose | Key Relations |
+|----------|---------|---------------|
+| **Contacts** | People, leads, decision-makers | → Lists (many-to-many), → Opportunities, → Activities |
+| **Opportunities** | Sales pipeline and deals | → Contacts (Buying Committee), → Activities |
+| **Lists** | **NEW** — Curated contact groups for campaigns | → Contacts (many-to-many) |
+| **Activities** | Calls, emails, meetings, notes, tasks | → Contacts, → Opportunities |
+
+### Lists Database Schema (NEW)
+
+```
+Lists
+├── List Name (title)
+├── Description (rich_text)
+├── Type (select): Campaign, Segment, Event, Custom
+├── Status (select): Active, Archived
+├── 👥 Contacts (relation → Contacts, many-to-many)
+├── Created Date (date)
+└── Last Used (date)
+```
+
+The Lists database replaces the old SQLite `contact_lists` and `contact_list_members` tables. A List is simply a Notion page with a relation property pointing to multiple Contacts. This means:
+- Lists are visible and editable directly in Notion
+- Claude can query/filter lists via the Notion API
+- Users can manage lists from Notion UI OR from the plugin
+- The Playground can render an interactive list editor
+
+### Contacts Database Schema (Simplified — no Company relation)
+
+```
+Contacts
+├── Contact Name (title)
+├── Title (rich_text)
+├── Contact Email (email)
+├── Contact Phone (phone_number)
+├── Company (rich_text)              ← Simple text field, NOT a relation
+├── LinkedIn (url)
+├── Buying Role (select)
+├── Engagement Level (select)
+├── Source (multi_select)
+├── Last Contact (date)
+├── 📋 Lists (relation → Lists)     ← NEW: synced from Lists.👥 Contacts
+├── 💼 Opportunities (relation → Opportunities)
+└── 📋 Activities (relation → Activities)
+```
+
+### Templates Database Schema (NEW — replaces SQLite templates table)
+
+```
+Templates
+├── Template Name (title)
+├── Content (rich_text)              ← Template body with {{variable}} placeholders
+├── Channel (select): SMS, WhatsApp, Both
+├── Category (select): Follow-up, Introduction, Event, Custom
+├── Variables (rich_text)            ← Auto-populated: "contact_name, first_name, company"
+├── Times Used (number)
+└── Last Used (date)
+```
+
+Templates now live in Notion, meaning:
+- Users can view/edit templates directly in Notion
+- Templates are backed up with the rest of the workspace
+- No local state to lose or corrupt
+
+---
+
 ## Feature-to-Plugin Primitive Mapping
 
 ### Legend
@@ -28,19 +110,21 @@ The current Notion CRM Connector is a full Next.js web application (Next.js 15, 
 
 ---
 
-### 1. Notion CRM Operations (26 MCP Tools)
+### 1. Notion CRM Operations (MCP Tools)
 
 | Feature | Current Implementation | Plugin Primitive | Migration Strategy |
 |---------|----------------------|------------------|--------------------|
-| Contact CRUD (create, search, count) | MCP tools + API routes | **MCP Server** (`.mcp.json`) | ✅ Reuse existing `mcp-server/` as-is. Already works with Claude Desktop. |
-| Account CRUD (create, search, count) | MCP tools | **MCP Server** | ✅ Already MCP-native. No changes needed. |
-| Opportunity CRUD (create, search, update, delete) | MCP tools | **MCP Server** | ✅ Already MCP-native. No changes needed. |
-| Relationships (link contact→account, contact→opportunity, champion) | MCP tools | **MCP Server** | ✅ Already MCP-native. No changes needed. |
-| Activities (create, search, update, get for contact) | MCP tools | **MCP Server** | ✅ Already MCP-native. No changes needed. |
-| Pipeline Intelligence (analytics, conversion, revenue, scoring) | MCP tools | **MCP Server** | ✅ Already MCP-native. No changes needed. |
-| Setup Activities DB | MCP tool | **MCP Server** | ✅ Already MCP-native. |
+| Contact CRUD (create, search, update, get) | MCP tools | **MCP Server** | ✅ Keep existing tools, remove account auto-creation. Company becomes a text field. |
+| Opportunity CRUD (create, search, update, delete) | MCP tools | **MCP Server** | ✅ Keep existing tools. Remove Account relation, keep Buying Committee → Contacts. |
+| Activities (log, create task, add note, get history) | MCP tools | **MCP Server** | ✅ Keep existing tools. Remove Account relations. Activities relate to Contacts + Opportunities only. |
+| Pipeline Intelligence (analytics, conversion, revenue, scoring) | MCP tools | **MCP Server** | ✅ Keep existing tools. Remove account-based analytics. |
+| Relationships (link records) | MCP tools | **MCP Server** | ✅ Keep `link_records` tool. Remove `get_account_overview`. |
 
-**Summary**: The 26 MCP tools are the backbone and already work as a standalone MCP server. The plugin bundles this server via `.mcp.json` so it auto-starts when the plugin is installed.
+**Removed**:
+- `create_account`, `search_accounts`, `update_account` — eliminated
+- `get_account_overview` — eliminated
+- Account relation on Activities — eliminated
+- Account relation on Opportunities — eliminated
 
 ---
 
@@ -48,53 +132,51 @@ The current Notion CRM Connector is a full Next.js web application (Next.js 15, 
 
 | Feature | Current Implementation | Plugin Primitive | Migration Strategy |
 |---------|----------------------|------------------|--------------------|
-| Default CRM schema (Accounts, Contacts, Opportunities) | `src/lib/schema/default-schema.ts` | **Skill** (`/create-crm`) | ✅ Skill with embedded schema. User says `/create-crm` and Claude creates the 3-phase pipeline. |
-| Real Estate schema variant | `src/lib/schema/default-schema.ts` | **Skill** (`/create-crm real-estate`) | ✅ Schema variant passed as `$ARGUMENTS`. |
-| Schema customization (add/remove/edit properties before creation) | React SchemaEditor + SchemaTree components | **Playground** 🔴 | Schema tree editing is deeply visual. Generate a Playground HTML where user can toggle properties, rename fields, adjust select options, then copy the finalized schema JSON back. |
-| Parent page selection | React dialog + Notion API search | **Skill** (prompt-driven) | ⚠️ Skill lists available pages via MCP, user picks by name/number. Less visual but functional. |
-| SSE streaming progress | `useCreationStream()` hook + SSE endpoint | **Skill** (sequential output) | ⚠️ Claude can report progress step-by-step as it executes. No real-time progress bar, but textual updates work. |
+| Default CRM schema (Contacts, Opportunities, Lists, Activities, Templates) | `default-schema.ts` | **Skill** (`/setup`) | ✅ `/setup` creates all 5 databases under `NOTION_CRM_PAGE_ID`. No Accounts. Adds Lists + Templates databases. |
+| Schema customization | React SchemaEditor | **Playground** 🔴 | Generate Playground HTML for property toggling. Or conversational: "add a Region select to Contacts". |
+| Parent page selection | React dialog | **Config value** | ✅ User provides `NOTION_CRM_PAGE_ID` during setup. Extracted from URL like `83a0ac85cdd3464c92083b1336f7bfe7`. |
+| SSE streaming progress | `useCreationStream()` | **Skill** (sequential output) | ⚠️ Claude reports progress step-by-step textually. |
 
 ---
 
-### 3. Contact Management (Local SQLite)
+### 3. Contact Management (Now 100% Notion)
 
 | Feature | Current Implementation | Plugin Primitive | Migration Strategy |
 |---------|----------------------|------------------|--------------------|
-| Add contact | POST `/api/contacts` + AddContactModal | **MCP Server** (new tool) | ✅ Add `create_local_contact` MCP tool. User says "add contact John Doe, john@acme.com". |
-| Edit contact | PUT `/api/contacts/[id]` + EditContactModal | **MCP Server** (new tool) | ✅ Add `update_local_contact` MCP tool. Conversational edit. |
-| Delete contact | DELETE `/api/contacts/[id]` | **MCP Server** (new tool) | ✅ Add `delete_local_contact` MCP tool. |
-| Search contacts | GET `/api/contacts?search=...` | **MCP Server** (new tool) | ✅ Add `search_local_contacts` MCP tool with search/filter/pagination. |
-| View contact detail | ContactDetailModal | **MCP Server** (new tool) | ✅ Add `get_local_contact` tool. Claude formats the detail as text. |
-| Bulk delete | POST `/api/contacts/bulk-delete` | **MCP Server** (new tool) | ⚠️ Add `bulk_delete_local_contacts` tool. User specifies IDs or criteria. |
-| CSV import | POST `/api/contacts/import-csv` + CSVImportModal | **MCP Server** (new tool) + **Skill** | ✅ Add `import_csv_contacts` tool. Skill `/import-contacts` reads a CSV file path, parses it, maps columns, and imports. |
-| Notion import/sync | POST `/api/notion/connect` + field mapping UI | **MCP Server** (new tool) + **Skill** | ⚠️ Add `connect_notion_database` and `sync_notion_contacts` tools. Field mapping done conversationally ("map Name to contact_name, Email to email..."). |
-| Contact table view (paginated, filterable) | ContactsTable component | **MCP Server** (tool output) | ⚠️ Tool returns formatted table. No persistent visual table, but Claude can display results in markdown tables. |
-| Bulk select for operations | Checkbox UI in ContactsTable | **Prompt UI limitation** 🔴 | See "Playground Solutions" below. For simple cases, user can say "select all contacts from Acme Corp" and Claude filters by criteria. |
+| Add contact | SQLite + API route | **MCP Server** (existing `create_contact`) | ✅ Already exists. Remove auto-account creation. Company is a text field. |
+| Edit contact | SQLite + API route | **MCP Server** (existing `update_contact`) | ✅ Already exists. |
+| Delete contact | SQLite + API route | **MCP Server** (Notion archive) | ✅ Archive Notion page. |
+| Search contacts | SQLite + API route | **MCP Server** (existing `search_contacts`) | ✅ Already exists. |
+| View contact detail | SQLite + modal | **MCP Server** (existing `get_contact`) | ✅ Already exists. |
+| CSV import | SQLite + API route | **MCP Server** (new `import_csv_to_notion`) + **Skill** | ⚠️ New tool reads CSV, creates Notion pages. Skill `/import-contacts` handles column mapping conversationally. |
+| Contact table view | React component | **MCP Server** (tool output) | ⚠️ Tool returns markdown table. Or users view in Notion directly. |
+| Bulk select for operations | Checkbox UI | **Lists** + **Playground** 🔴 | Users pre-curate Lists, then operate on Lists. Playground for visual selection when needed. |
 
 ---
 
-### 4. Contact Lists
+### 4. Contact Lists (NEW — Notion Database)
 
 | Feature | Current Implementation | Plugin Primitive | Migration Strategy |
 |---------|----------------------|------------------|--------------------|
-| Create list | POST `/api/lists` + CreateListModal | **MCP Server** (new tool) | ✅ `create_contact_list` tool. |
-| View lists | GET `/api/lists` | **MCP Server** (new tool) | ✅ `list_contact_lists` tool. |
-| Add members to list | POST `/api/lists/[id]/members` | **MCP Server** (new tool) | ✅ `add_to_list` tool. User says "add all Acme contacts to the Enterprise list". |
-| Remove members | DELETE `/api/lists/[id]/members` | **MCP Server** (new tool) | ✅ `remove_from_list` tool. |
-| View list members | GET `/api/lists/[id]` | **MCP Server** (new tool) | ✅ `get_list_members` tool. |
-| Delete list | DELETE `/api/lists/[id]` | **MCP Server** (new tool) | ✅ `delete_contact_list` tool. |
+| Create list | SQLite `contact_lists` table | **MCP Server** (new `create_list`) | ✅ Creates a page in Lists database. |
+| View all lists | SQLite query | **MCP Server** (new `search_lists`) | ✅ Queries Lists database. |
+| Add contacts to list | SQLite junction table | **MCP Server** (new `add_contacts_to_list`) | ✅ Appends to the `👥 Contacts` relation property. |
+| Remove contacts from list | SQLite junction table | **MCP Server** (new `remove_contacts_from_list`) | ✅ Removes from relation property. |
+| View list members | SQLite join query | **MCP Server** (new `get_list_members`) | ✅ Reads the `👥 Contacts` relation and fetches linked contacts. |
+| Delete list | SQLite delete | **MCP Server** (Notion archive) | ✅ Archives the list page. |
+| **Visual list management** | N/A (new) | **Playground** 🔴 | Playground HTML with contact table + checkboxes + drag to list. See Playground section. |
 
 ---
 
-### 5. Message Templates
+### 5. Message Templates (NEW — Notion Database)
 
 | Feature | Current Implementation | Plugin Primitive | Migration Strategy |
 |---------|----------------------|------------------|--------------------|
-| View all templates | GET `/api/templates` | **MCP Server** (new tool) | ✅ `list_templates` tool. |
-| Create template | POST `/api/templates` + TemplateEditor | **Playground** 🔴 + **MCP Server** | Template authoring with variable insertion (`{{first_name}}`, `{{company}}`) benefits from a visual editor. Generate a Playground HTML with a text editor, variable buttons, and live preview. Also support conversational creation via MCP tool. |
-| Edit template | PUT `/api/templates/[id]` + TemplateEditor | **Playground** 🔴 + **MCP Server** | Same as create — Playground for visual editing, MCP tool for conversational. |
-| Delete template | DELETE `/api/templates/[id]` | **MCP Server** (new tool) | ✅ `delete_template` tool. |
-| Variable substitution engine | `src/lib/templates/parser.ts` | **MCP Server** (embedded logic) | ✅ Port `extractVariables()`, `replaceVariables()`, `enhanceContactData()` into MCP server. |
+| View all templates | SQLite query | **MCP Server** (new `search_templates`) | ✅ Queries Templates database. |
+| Create template | SQLite insert + TemplateEditor | **MCP Server** (new `create_template`) + **Playground** 🔴 | Create via MCP tool conversationally, or via Playground for visual editing with variable buttons + live preview. |
+| Edit template | SQLite update + TemplateEditor | **MCP Server** (new `update_template`) + **Playground** 🔴 | Same dual approach. |
+| Delete template | SQLite delete | **MCP Server** (Notion archive) | ✅ Archives the template page. |
+| Variable substitution engine | `src/lib/templates/parser.ts` | **MCP Server** (new `resolve_template`) | ✅ Port `extractVariables()`, `replaceVariables()`, `enhanceContactData()` into MCP server. |
 
 ---
 
@@ -102,105 +184,92 @@ The current Notion CRM Connector is a full Next.js web application (Next.js 15, 
 
 | Feature | Current Implementation | Plugin Primitive | Migration Strategy |
 |---------|----------------------|------------------|--------------------|
-| 3-step wizard (template → contacts → review & send) | SendMessageFlowStepper (React) | **Skill** (`/send-sms`, `/send-whatsapp`) | ⚠️ Skill walks through steps conversationally. Claude asks "which template?", then "which contacts/list?", then generates the send prompt. |
-| Template selection (Step 1) | TemplateSelectorCards component | **Skill** (conversational) | ✅ Skill lists templates, user picks by name/number. |
-| Contact selection for bulk messaging (Step 2) | ContactSelector component with checkboxes | **Playground** 🔴 | Selecting specific contacts from a large list via checkboxes is inherently visual. Options: (a) Playground with interactive contact table + checkboxes, (b) use lists ("send to Enterprise list"), (c) criteria-based ("send to all contacts with phone numbers from Acme Corp"). |
-| Message preview carousel (Step 2-3) | MessagePreviewCarousel component | **Skill** (text output) | ⚠️ Claude can show a few sample resolved messages in text. No carousel, but functional. |
-| Prompt generation for Claude Desktop | PromptGeneratorEnhanced component | **Skill** (direct execution) 🎯 | ✅ **Major improvement**: Instead of generating a prompt to paste into Claude Desktop, the plugin IS Claude Desktop. The skill can directly invoke iMessage/WhatsApp MCP tools to send messages. No copy-paste needed. |
-| Activity logging after send | POST `/api/activities/log-sms` | **MCP Server** (tool) | ✅ `log_messaging_activity` tool that writes to local DB and syncs to Notion. |
-| Channel config (SMS vs WhatsApp) | `src/lib/templates/channels.ts` | **Skill** arguments | ✅ `/send-sms` vs `/send-whatsapp` as separate skills, or `/send-message sms` with argument. |
+| 3-step wizard (template → contacts → review & send) | React stepper | **Skill** (`/send-sms`, `/send-whatsapp`) | ⚠️ Conversational flow. Claude asks "which template?", then "which list/contacts?", resolves variables, sends. |
+| Template selection (Step 1) | React cards | **Skill** (conversational) | ✅ Claude queries Templates DB, presents options, user picks by name/number. |
+| Contact selection (Step 2) | React checkboxes | **Lists** + **Playground** 🔴 | **Primary path**: "Send to the Enterprise Prospects list". Lists make selection trivial. **Power user path**: Playground for custom selection. **Fallback**: criteria-based ("send to all contacts from Acme Corp"). |
+| Message preview (Step 2-3) | React carousel | **Skill** (text output) | ⚠️ Claude shows a few resolved message samples. No carousel, but functional. |
+| Prompt generation for Claude Desktop | PromptGeneratorEnhanced | **Skill** (direct execution) 🎯 | ✅ **Major improvement**: Plugin IS Claude Desktop. Skill directly invokes iMessage/WhatsApp MCP to send. No copy-paste. |
+| Activity logging after send | SQLite + API route | **MCP Server** (existing `log_activity`) | ✅ Logs to Notion Activities DB with Contact relation. |
+| Channel config (SMS vs WhatsApp) | `channels.ts` | **Skill** arguments | ✅ `/send-sms` vs `/send-whatsapp` as separate skills. |
 
 ---
 
-### 7. Notion Integration & Configuration
+### 7. Configuration
 
 | Feature | Current Implementation | Plugin Primitive | Migration Strategy |
 |---------|----------------------|------------------|--------------------|
-| Notion OAuth authentication | Manual OAuth flow in `src/lib/auth/` | **Plugin setup** + **Hook** | ⚠️ Plugin uses Notion API key (internal integration) instead of OAuth. The MCP server already supports this via `NOTION_API_KEY` env var. A `SessionStart` hook can verify the key is set. |
-| Connect Notion database | POST `/api/notion/connect` + field mapping UI | **Skill** (`/connect-notion`) | ⚠️ Conversational: "Which Notion database?" → list databases → "How should I map fields?" → user confirms. |
-| Database field schema display | GET `/api/notion/database-schema` | **MCP Server** (tool) | ✅ Tool fetches and displays schema. |
-| MCP status dashboard | MCPConnectPage component | **Skill** (`/crm-status`) | ✅ Skill checks MCP connectivity, lists connected databases, shows field counts. |
-| Sync connected databases | POST `/api/notion/connect/[id]/sync` | **MCP Server** (tool) | ✅ `sync_notion_database` tool. |
-
----
-
-### 8. Authentication & Session
-
-| Feature | Current Implementation | Plugin Primitive | Migration Strategy |
-|---------|----------------------|------------------|--------------------|
-| Notion OAuth (production) | JWE encrypted cookies, token refresh | **Eliminated** | ✅ Plugin uses `NOTION_API_KEY` env var (internal integration token). No OAuth needed — simpler for end users. |
-| Session management | Cookie-based sessions | **Eliminated** | ✅ MCP server is stateless per-request; Notion API key persists in env. |
-| Dev mode | Skip OAuth, use API key | **Default mode** | ✅ This becomes the only mode. |
+| Notion OAuth | Full OAuth flow | **Eliminated** | ✅ `NOTION_API_KEY` env var. Users create a Notion internal integration. |
+| Session management | Cookies + JWE | **Eliminated** | ✅ MCP server is stateless. API key persists in env. |
+| CRM Parent Page | Hardcoded or selected in UI | **`NOTION_CRM_PAGE_ID` env var** | ✅ User provides the page ID from their Notion URL. All databases created under this page. |
+| Database discovery | API routes + field mapping UI | **MCP Server** (auto-discovery) | ✅ MCP server reads `NOTION_CRM_PAGE_ID` children to find Contacts, Lists, Templates, etc. Schema file maps DB IDs. |
+| MCP status dashboard | React component | **Skill** (`/crm-status`) | ✅ Checks connectivity, lists databases, shows counts. |
 
 ---
 
 ## Playground Plugin Solutions for Hard UX Problems
 
-### Problem 1: Template Authoring & Editing 🔴
+### Problem 1: List Management (Add/Remove Contacts from Lists) 🔴
 
-**Why it's hard in prompt UI**: Writing message templates with `{{variable}}` placeholders benefits from seeing the template rendered in real-time, having quick-insert buttons for common variables, and validating that all variables will resolve.
+**Why it's hard in prompt UI**: Managing a list of 50+ contacts — seeing who's in, who's out, searching/filtering, multi-selecting — is fundamentally a visual, spatial task. Typing "add John, Sarah, Mike, Lisa, and 12 others" is tedious and error-prone.
 
-**Playground Solution**: The `/edit-template` skill generates a Playground HTML with:
-- Left panel: Text editor with the template content
-- Variable quick-insert buttons: `{{contact_name}}`, `{{first_name}}`, `{{company}}`, etc.
-- Right panel: Live preview showing the template with sample contact data substituted
-- Bottom: Generated JSON output that the skill reads back to create/update the template via MCP tool
+**Playground Solution**: The `/manage-list` skill generates a Playground HTML with:
+- **Left panel**: All contacts table with search, filter by company/source/engagement
+- **Right panel**: Current list members
+- **Controls**: Checkboxes to add/remove, drag between panels
+- **Bottom**: Generated JSON output with `{ listId, addContactIds: [...], removeContactIds: [...] }`
 
 **Flow**:
-1. User: `/edit-template Follow-up Meeting`
-2. Claude generates Playground HTML, opens in browser
-3. User edits template visually, clicks "Copy Output"
-4. User pastes output back into Claude
-5. Claude saves via MCP tool
+1. User: `/manage-list Enterprise Prospects`
+2. Claude fetches all contacts + current list members from Notion via MCP
+3. Claude generates Playground HTML with the data embedded, writes to file, opens in browser
+4. User visually manages the list, clicks "Copy Output"
+5. User pastes output back into Claude
+6. Claude applies changes via MCP tools (add/remove contacts from list relation)
+
+**Alternative (no Playground)**:
+- "Add all contacts from Acme Corp to the Enterprise Prospects list"
+- "Show me who's on the Enterprise Prospects list" → Claude shows table → "Remove Sarah and add Mike"
+- Criteria-based: "Create a list of all Hot contacts with phone numbers"
 
 ### Problem 2: Contact Selection for Bulk Messaging 🔴
 
-**Why it's hard in prompt UI**: Selecting 15 specific contacts out of 200 by typing names is tedious and error-prone. The current app uses a checkbox table with search.
+**Why it's hard in prompt UI**: Selecting 15 specific contacts out of 200 by typing names is tedious and error-prone.
 
-**Playground Solution**: The `/select-contacts` skill generates a Playground HTML with:
-- Searchable, sortable contact table with checkboxes
-- Filter controls (by source, company, list membership)
-- Selected contacts summary panel
-- Bottom: Generated output listing selected contact IDs
+**Playground Solution**: Same as list management — generate Playground HTML with contact table + checkboxes. But the key insight is: **Lists solve this problem architecturally**. If users maintain lists, they just say "send to my Enterprise Prospects list" and selection is done.
 
-**Alternative approaches** (no Playground):
-- **List-based**: "Send to the Enterprise Prospects list" — pre-curated lists make selection trivial
-- **Criteria-based**: "Send to all contacts at Acme Corp who have phone numbers" — Claude filters via MCP tool
-- **Confirmation-based**: Claude shows matching contacts, user says "yes" or "remove John, add Sarah"
+**Recommended flow**:
+1. User maintains Lists in Notion or via `/manage-list`
+2. `/send-sms Enterprise Prospects` uses the list directly
+3. Playground only needed for ad-hoc one-off selections
 
-**Recommendation**: Support all three approaches. Playground for power users who want visual selection; lists and criteria for the common case.
+### Problem 3: Template Authoring & Editing 🔴
 
-### Problem 3: Schema Customization 🔴
+**Why it's hard in prompt UI**: Writing templates with `{{variable}}` placeholders benefits from real-time preview, quick-insert buttons, and variable validation.
 
-**Why it's hard in prompt UI**: The current schema editor is a tree view where users toggle properties, edit names, adjust select options across 3 databases with 30+ properties each.
+**Playground Solution**: The `/edit-template` skill generates a Playground HTML with:
+- Left panel: Text editor with template content
+- Variable quick-insert buttons: `{{contact_name}}`, `{{first_name}}`, `{{company}}`, etc.
+- Right panel: Live preview with sample contact data substituted
+- Bottom: Generated JSON output `{ name, content, channel, category }`
 
-**Playground Solution**: Generate a Playground HTML with:
-- Tree view of databases and their properties
-- Toggle switches to include/exclude properties
-- Inline editing for property names and select options
-- Preview of the Notion database structure
-- Bottom: Finalized schema JSON
+**Flow**:
+1. User: `/edit-template Follow-up Meeting`
+2. Claude fetches template from Notion via MCP (or starts blank for new)
+3. Claude generates Playground HTML, opens in browser
+4. User edits visually, clicks "Copy Output"
+5. User pastes back, Claude saves to Notion Templates DB
 
-**Alternative**: For simpler cases, conversational customization works: "Remove the LinkedIn field from Contacts, add a 'Region' select with East/West/Central options."
+**Alternative (no Playground)**:
+- Conversational: "Create a template called 'Follow-up' for SMS that says: Hi {{first_name}}, great meeting you at {{event}}. Let's connect this week!"
+- Claude validates variables exist, saves to Notion
 
 ### Problem 4: CSV Import Column Mapping 🔴
 
-**Why it's hard in prompt UI**: Mapping CSV columns to contact fields requires seeing a preview of the data and confirming the mapping.
+**Why it's hard in prompt UI**: Mapping CSV columns to contact fields needs data preview.
 
-**Playground Solution**: Generate a Playground HTML with:
-- CSV preview table (first 5 rows)
-- Dropdown mapping for each CSV column → contact field
-- Preview of how contacts will be created
+**Playground Solution**: Generate Playground HTML with CSV preview + dropdown mapping.
 
-**Alternative**: Claude can read the CSV file, show a sample, and propose a mapping: "I see columns Name, Email, Phone, Company. I'll map them to contact_name, email, phone, company. Does that look right?"
-
----
-
-## Design Decisions
-
-- **Auth**: `NOTION_API_KEY` env var (internal integration token). No OAuth.
-- **MCP Servers**: Single merged server (~41 tools). Notion CRM tools + local SQLite tools in one process.
-- **Primary Client**: Claude Desktop Co-work tab. Skills optimized for conversational Co-work UX.
+**Alternative**: Claude reads the CSV, shows sample rows, proposes mapping: "I see columns Name, Email, Phone, Company. I'll map them to Contact Name, Contact Email, Contact Phone, Company. Sound good?"
 
 ---
 
@@ -211,90 +280,113 @@ notion-crm-plugin/
 ├── .claude-plugin/
 │   └── plugin.json                    # Plugin manifest
 ├── skills/
+│   ├── setup/
+│   │   └── SKILL.md                   # /setup - First-time config + DB creation
 │   ├── create-crm/
-│   │   └── SKILL.md                   # /create-crm - Build CRM in Notion
+│   │   └── SKILL.md                   # /create-crm - Build CRM databases in Notion
 │   ├── send-sms/
 │   │   └── SKILL.md                   # /send-sms - SMS messaging workflow
 │   ├── send-whatsapp/
 │   │   └── SKILL.md                   # /send-whatsapp - WhatsApp messaging workflow
 │   ├── import-contacts/
-│   │   └── SKILL.md                   # /import-contacts - CSV/Notion import
-│   ├── connect-notion/
-│   │   └── SKILL.md                   # /connect-notion - Connect Notion DB
-│   ├── crm-status/
-│   │   └── SKILL.md                   # /crm-status - Check system status
+│   │   └── SKILL.md                   # /import-contacts - CSV import to Notion
 │   ├── manage-templates/
 │   │   └── SKILL.md                   # /manage-templates - Template CRUD
+│   ├── manage-list/
+│   │   └── SKILL.md                   # /manage-list - Visual list management
 │   ├── bulk-message/
-│   │   └── SKILL.md                   # /bulk-message - Bulk send workflow
-│   └── setup/
-│       └── SKILL.md                   # /setup - First-time configuration
+│   │   └── SKILL.md                   # /bulk-message - List + template + send
+│   └── crm-status/
+│       └── SKILL.md                   # /crm-status - System health check
 ├── agents/
 │   └── crm-assistant.md               # CRM-aware subagent with persistent memory
 ├── hooks/
-│   └── hooks.json                     # SessionStart: verify config, show status
+│   └── hooks.json                     # SessionStart: verify config
 ├── .mcp.json                          # Single MCP server config
-├── mcp-server/                        # Single merged MCP server (~41 tools)
+├── mcp-server/                        # Single MCP server (all Notion tools)
 │   ├── src/
 │   │   ├── index.ts                   # Entry: registers all tool groups
 │   │   ├── tools/
-│   │   │   ├── contacts.ts            # Notion contact CRUD (existing)
-│   │   │   ├── accounts.ts            # Notion account CRUD (existing)
-│   │   │   ├── opportunities.ts       # Notion opportunity CRUD (existing)
-│   │   │   ├── relationships.ts       # Notion relationship tools (existing)
-│   │   │   ├── pipeline.ts            # Pipeline analytics (existing)
-│   │   │   ├── activities.ts          # Notion activity tools (existing)
-│   │   │   ├── intelligence.ts        # Analytics/scoring (existing)
-│   │   │   ├── local-contacts.ts      # NEW: Local SQLite contact CRUD
-│   │   │   ├── local-lists.ts         # NEW: Contact list management
-│   │   │   ├── local-templates.ts     # NEW: Message template CRUD
-│   │   │   ├── local-activities.ts    # NEW: Activity logging + dual-write
-│   │   │   └── local-import.ts        # NEW: CSV import, Notion DB sync
-│   │   ├── operations/                # Existing Notion query/create ops
-│   │   ├── utils/                     # Existing formatters, validators
-│   │   ├── db/
-│   │   │   ├── client.ts             # Port from src/lib/db/client.ts
-│   │   │   └── schema.sql            # Port from src/lib/db/schema.sql
+│   │   │   ├── contacts.ts            # Contact CRUD (simplified, no account link)
+│   │   │   ├── opportunities.ts       # Opportunity CRUD (no account link)
+│   │   │   ├── relationships.ts       # link_records (generic)
+│   │   │   ├── pipeline.ts            # Pipeline analytics
+│   │   │   ├── activities.ts          # Activity tools (no account link)
+│   │   │   ├── intelligence.ts        # Analytics/scoring
+│   │   │   ├── lists.ts              # NEW: List CRUD + member management
+│   │   │   ├── templates.ts          # NEW: Template CRUD + variable resolution
+│   │   │   └── import.ts            # NEW: CSV import to Notion
+│   │   ├── operations/                # Existing Notion query/create/update/link ops
+│   │   ├── utils/                     # Existing formatters, validators, date utils
+│   │   ├── schema/                    # Schema loader/validator
 │   │   └── templates/
 │   │       └── parser.ts             # Port from src/lib/templates/parser.ts
-│   ├── data/                          # SQLite DB + CRM schema JSON
 │   └── package.json
 ├── scripts/
-│   ├── setup.sh                       # Install deps, init DB, verify Notion key
-│   └── verify-config.sh               # Check NOTION_API_KEY, DB exists
+│   ├── setup.sh                       # Install deps, verify env vars
+│   └── verify-config.sh               # Check NOTION_API_KEY + NOTION_CRM_PAGE_ID
 └── README.md
 ```
 
 ---
 
-## MCP Server Architecture (Single Merged Server — ~41 tools)
+## MCP Server Architecture (Single Server)
 
-One server process with all tools. Existing 26 Notion tools kept as-is, plus ~15 new local SQLite tools added to the same server. Tools can cross-reference each other (e.g., `log_messaging_activity` writes to local DB AND syncs to Notion Activities DB in one call).
+One server process with all tools. Existing Notion tools refactored (remove Account references), plus new List/Template/Import tools.
 
-### Existing Tools (26) — Reuse from `mcp-server/`
-All contact, account, opportunity, relationship, pipeline, activity, and intelligence tools. No changes.
+### Retained Tools (Modified — remove Account references)
 
-### New Tools (~15) — Port from Next.js API routes
+| Tool | Changes |
+|------|---------|
+| `create_contact` | Remove `company` auto-account creation. Company becomes a text property. |
+| `search_contacts` | No changes needed. |
+| `update_contact` | No changes needed. |
+| `get_contact` | No changes needed. |
+| `create_opportunity` | Remove Account relation. Keep Buying Committee → Contacts. |
+| `search_opportunities` | Remove account-based filtering. |
+| `update_opportunity` | Remove account fields. |
+| `delete_opportunity` | No changes needed. |
+| `link_records` | Keep as generic relation linker. |
+| `log_activity` | Remove account_name/account_id params. Link to Contact + Opportunity only. |
+| `create_task` | Remove account params. |
+| `add_note` | Remove account params. |
+| `get_activity_history` | Remove account-based filtering. |
+| `setup_activities_database` | Remove Account relation. Use `NOTION_CRM_PAGE_ID` as parent. |
+| `pipeline_analytics` | Remove account-based analytics. |
+| `conversion_analysis` | No changes needed. |
+| `revenue_intelligence` | Remove account-level revenue. |
+| `contact_scoring` | No changes needed. |
+| `pipeline_forecast` | No changes needed. |
+| `deal_risk_analysis` | Remove account context. |
 
-| Tool | Source Code to Port |
-|------|-------------------|
-| `search_local_contacts` | `src/lib/db/client.ts` → `contactDB.getAll()` + `contactDB.search()` |
-| `create_local_contact` | `src/lib/db/client.ts` → `contactDB.create()` |
-| `update_local_contact` | `src/lib/db/client.ts` → `contactDB.update()` |
-| `delete_local_contact` | `src/lib/db/client.ts` → `contactDB.delete()` |
-| `bulk_delete_contacts` | `src/lib/db/client.ts` → loop `contactDB.delete()` |
-| `import_csv_contacts` | `src/lib/db/client.ts` → `contactDB.createMany()` + CSV parsing |
-| `list_templates` | `src/lib/db/client.ts` → `templateDB.getAll()` |
-| `create_template` | `src/lib/db/client.ts` → `templateDB.create()` |
-| `update_template` | `src/lib/db/client.ts` → `templateDB.update()` |
-| `delete_template` | `src/lib/db/client.ts` → `templateDB.delete()` |
-| `resolve_template` | `src/lib/templates/parser.ts` → `replaceVariables()` |
-| `list_contact_lists` | `src/lib/db/client.ts` → `listDB.getAll()` |
-| `create_contact_list` | `src/lib/db/client.ts` → `listDB.create()` |
-| `manage_list_members` | `src/lib/db/client.ts` → `listDB.addMembers()` / `removeMembers()` |
-| `log_messaging_activity` | `src/app/api/activities/log-sms/route.ts` — dual-write to local DB + Notion |
-| `connect_notion_database` | `src/app/api/notion/connect/route.ts` logic |
-| `sync_notion_contacts` | `src/app/api/notion/connect/[id]/sync/route.ts` logic |
+### Removed Tools
+
+| Tool | Why |
+|------|-----|
+| `create_account` | No Accounts database. |
+| `search_accounts` | No Accounts database. |
+| `update_account` | No Accounts database. |
+| `get_account_overview` | No Accounts database. |
+
+### New Tools
+
+| Tool | Purpose |
+|------|---------|
+| `create_list` | Create a new List in Notion with name, description, type. |
+| `search_lists` | Search/filter Lists by name, type, status. |
+| `get_list_members` | Get all contacts in a specific list. |
+| `add_contacts_to_list` | Append contact IDs to a list's relation property. |
+| `remove_contacts_from_list` | Remove contact IDs from a list's relation. |
+| `archive_list` | Archive a list page. |
+| `create_template` | Create a Template page in Notion. |
+| `search_templates` | Search/filter Templates by name, channel, category. |
+| `update_template` | Update template content/metadata. |
+| `archive_template` | Archive a template page. |
+| `resolve_template` | Resolve `{{variables}}` against a contact's data. Returns rendered message. |
+| `resolve_template_for_list` | Resolve template for all contacts in a list. Returns array of rendered messages. |
+| `import_csv_to_notion` | Parse CSV file, create Contact pages in Notion. |
+| `setup_lists_database` | Create Lists database under CRM parent page. |
+| `setup_templates_database` | Create Templates database under CRM parent page. |
 
 ---
 
@@ -302,60 +394,85 @@ All contact, account, opportunity, relationship, pipeline, activity, and intelli
 
 ### `/setup` — First-Time Configuration
 ```
-Checks for NOTION_API_KEY, initializes SQLite DB, verifies MCP server connectivity.
-Walks user through: get Notion integration token → set env var → test connection.
+Required env vars: NOTION_API_KEY, NOTION_CRM_PAGE_ID
+Steps:
+1. Verify NOTION_API_KEY is set and valid (test API call)
+2. Accept NOTION_CRM_PAGE_ID from user (extract ID from Notion URL)
+3. Check if CRM databases exist under parent page
+4. If not, offer to create them: Contacts, Opportunities, Lists, Templates, Activities
+5. Save schema mapping (database IDs → keys) to schema.json
+6. Confirm setup complete with status summary
+
+User provides their Notion page URL like:
+https://www.notion.so/CRM-Parent-Page-83a0ac85cdd3464c92083b1336f7bfe7
+Plugin extracts: 83a0ac85cdd3464c92083b1336f7bfe7
 ```
 
-### `/create-crm` — Build CRM in Notion
+### `/create-crm` — Build CRM Databases
 ```
-Accepts optional schema type ($ARGUMENTS: "default" or "real-estate").
-Uses embedded schema from default-schema.ts.
-Executes 3-phase creation via Notion API calls through MCP tools.
-Reports progress textually step-by-step.
+Creates all 5 databases under NOTION_CRM_PAGE_ID:
+1. Contacts (with all properties + relation stubs)
+2. Opportunities (with pipeline stages + Contact relations)
+3. Lists (with Contact many-to-many relation)
+4. Templates (with content + variables + channel)
+5. Activities (with Contact + Opportunity relations)
+Sets up cross-database relations after all DBs exist.
+Reports progress step-by-step.
 ```
 
 ### `/send-sms` and `/send-whatsapp` — Messaging Workflows
 ```
 Conversational 3-step flow:
-1. List templates, user picks one
-2. User specifies contacts (by name, list, or criteria)
-3. Claude resolves variables, shows preview, then DIRECTLY sends via iMessage/WhatsApp MCP
-4. Logs activity to local DB + Notion
+1. List templates from Notion, user picks one
+2. User specifies list name OR contact criteria
+3. Claude resolves variables per contact, shows preview, DIRECTLY sends via iMessage/WhatsApp MCP
+4. Logs activity to Notion Activities DB per contact
+5. Updates template "Times Used" and "Last Used"
 
-Key improvement: No more "copy prompt to Claude Desktop" — the plugin IS Claude Desktop.
-```
-
-### `/import-contacts` — CSV or Notion Import
-```
-Accepts file path or "notion" as argument.
-CSV: Reads file, shows sample rows, proposes column mapping, imports.
-Notion: Lists connected databases, fetches records, maps fields, imports.
+Key improvement: Plugin IS Claude Desktop. No copy-paste prompt generation.
 ```
 
-### `/connect-notion` — Database Connection
+### `/import-contacts` — CSV Import to Notion
 ```
-Lists available Notion databases via API.
-User picks one. Claude shows fields, proposes mapping.
-User confirms. Connection saved to local DB.
+Accepts file path as argument.
+1. Read CSV file, show first 5 rows as sample
+2. Propose column mapping: CSV column → Notion property
+3. User confirms or adjusts
+4. Create Contact pages in Notion (with rate limiting)
+5. Optionally add imported contacts to a List
 ```
 
 ### `/manage-templates` — Template CRUD
 ```
-Lists templates. User can create/edit/delete.
-For creation: Claude asks for name and content, supports {{variable}} syntax.
-For visual editing: Suggests using Playground plugin.
+Lists templates from Notion. User can:
+- View all: Claude queries Templates DB, shows table
+- Create: conversational ("name it X, content is Y, channel is SMS")
+- Edit: conversational or Playground for visual editing
+- Delete: archive in Notion
+Supports {{variable}} syntax with validation.
+```
+
+### `/manage-list` — Visual List Management
+```
+Primary path: Generate Playground HTML for visual contact ↔ list management.
+Fallback: Conversational ("add all Hot contacts to the Conference Follow-ups list").
+Arguments: /manage-list [list-name]
 ```
 
 ### `/bulk-message` — Power User Bulk Send
 ```
-Combines list selection + template + send in one flow.
-Accepts arguments: /bulk-message "Enterprise Prospects" "Follow-up Template"
+One-shot: /bulk-message "Enterprise Prospects" "Follow-up Template" sms
+Expands to full send-sms flow with list and template pre-selected.
 ```
 
 ### `/crm-status` — System Health Check
 ```
-Shows: Notion connection status, connected databases, local DB stats,
-MCP server status, template count, contact count by source.
+Shows:
+- Notion connection status (API key valid?)
+- CRM Parent Page accessible?
+- Database inventory: Contacts (N), Opportunities (N), Lists (N), Templates (N), Activities (N)
+- MCP server status
+- Missing databases (if any)
 ```
 
 ---
@@ -381,9 +498,9 @@ MCP server status, template count, contact count by source.
 
 The `SessionStart` hook runs `verify-config.sh` which:
 1. Checks if `NOTION_API_KEY` env var is set
-2. Checks if SQLite DB exists and is initialized
-3. Outputs status summary that gets injected into Claude's context
-4. If not configured, outputs instructions for setup
+2. Checks if `NOTION_CRM_PAGE_ID` env var is set
+3. Outputs status summary injected into Claude's context
+4. If not configured, outputs: "Run /setup to configure your CRM"
 
 ---
 
@@ -393,37 +510,44 @@ The `SessionStart` hook runs `verify-config.sh` which:
 ```yaml
 ---
 name: crm-assistant
-description: CRM specialist that manages contacts, opportunities, and messaging campaigns. Delegates CRM tasks.
+description: CRM specialist that manages contacts, opportunities, lists, templates, and messaging campaigns. Use for any CRM-related task.
 tools: Read, Bash, Glob, Grep
 model: sonnet
 memory: project
 skills:
+  - setup
   - create-crm
   - send-sms
   - send-whatsapp
   - import-contacts
   - manage-templates
+  - manage-list
+  - bulk-message
 mcpServers:
   notion-crm:
 ---
 ```
 
-With `memory: project`, the agent remembers user preferences, common contacts, frequently used templates across sessions. Single MCP server (`notion-crm`) contains all tools.
+With `memory: project`, the agent remembers user preferences, frequently used lists, favorite templates across sessions.
 
 ---
 
-## What Gets Eliminated (No Longer Needed)
+## What Gets Eliminated
 
 | Component | Why Eliminated |
 |-----------|---------------|
 | Next.js app (all React pages/components) | Replaced by skills + MCP tools + conversational UI |
-| 27 API route handlers | Logic moves into MCP server tools |
-| OAuth authentication | Replaced by simple `NOTION_API_KEY` env var |
-| JWE session encryption | No sessions needed — MCP is stateless |
-| shadcn/ui components | No visual UI in plugin |
-| Tailwind CSS | No visual UI in plugin |
-| SSE streaming endpoint | Progress reported textually by Claude |
-| Middleware | No route protection needed |
+| 27 API route handlers | All logic moves to MCP server tools |
+| **SQLite database** | **All data lives in Notion** |
+| `better-sqlite3` dependency | No local database |
+| `src/lib/db/` (client.ts, schema.sql) | Replaced by Notion API calls |
+| **Accounts database** | Company is a text field on Contacts |
+| OAuth authentication | Replaced by `NOTION_API_KEY` env var |
+| JWE session encryption | No sessions needed |
+| shadcn/ui, Radix UI, Tailwind CSS | No web UI |
+| SSE streaming endpoint | Progress reported textually |
+| Middleware | No route protection |
+| `papaparse` on frontend | CSV parsing moves to MCP server |
 
 ---
 
@@ -431,11 +555,13 @@ With `memory: project`, the agent remembers user preferences, common contacts, f
 
 | Area | Before (Next.js App) | After (Plugin) |
 |------|---------------------|----------------|
-| **Message sending** | Generate prompt → copy → paste into Claude Desktop → wait | Direct execution via iMessage/WhatsApp MCP tools — one-step |
-| **Installation** | `git clone` → `npm install` → configure env → `npm run dev` | `claude plugin install notion-crm` → set API key → done |
+| **Data location** | Split between SQLite (local) and Notion (remote) — sync headaches | **All in Notion** — single source of truth |
+| **Message sending** | Generate prompt → copy → paste into Claude Desktop → wait | Direct execution via iMessage/WhatsApp MCP — one-step |
+| **Installation** | `git clone` → `npm install` → configure env → `npm run dev` | `claude plugin install notion-crm` → set 2 env vars → `/setup` → done |
 | **CRM queries** | Navigate to tab → use search UI → read results | "Show me all open opportunities over $50k" — natural language |
-| **Multi-step workflows** | Click through multi-step wizard | Describe what you want, Claude handles the steps |
-| **Pipeline intelligence** | Already MCP-native | Same, but now integrated into conversational context |
+| **Multi-step workflows** | Click through multi-step wizard | Describe what you want, Claude handles it |
+| **Data portability** | SQLite file locked to one machine | Notion accessible everywhere, by anyone with workspace access |
+| **Collaboration** | Single-user local app | Multi-user via Notion workspace sharing |
 | **Updates** | `git pull` → rebuild | `claude plugin update notion-crm` |
 
 ---
@@ -444,58 +570,65 @@ With `memory: project`, the agent remembers user preferences, common contacts, f
 
 | Area | Impact | Mitigation |
 |------|--------|------------|
-| **Contact table browsing** | No persistent sortable/filterable table view | MCP tool returns paginated results; Playground for visual browsing |
-| **Template visual editing** | No real-time WYSIWYG editor | Playground plugin generates interactive editor; or conversational authoring |
-| **Bulk contact selection** | No checkbox multi-select UI | Lists, criteria-based selection, Playground for power users |
-| **Schema tree editing** | No drag-and-drop tree editor | Playground or conversational customization |
-| **Progress visualization** | No animated progress bars | Textual step-by-step updates from Claude |
+| **API rate limits** | Notion API has rate limits (3 req/sec) | Rate limiter in MCP server (already exists). Batch operations. |
+| **Offline access** | No data available without internet | Notion limitation. Acceptable for CRM use case. |
+| **Speed** | Notion API calls slower than local SQLite reads | Acceptable. Cache hot data in agent memory. |
+| **Contact table browsing** | No persistent sortable/filterable table view | Users can view in Notion directly. MCP returns markdown tables. |
+| **Template visual editing** | No real-time WYSIWYG editor | Playground plugin + conversational fallback |
+| **List management** | No drag-and-drop list builder | Playground plugin + conversational fallback + Notion UI |
 | **At-a-glance dashboard** | No persistent status dashboard | `/crm-status` skill on demand |
 
 ---
 
 ## Implementation Order
 
-### Phase 1: Plugin Scaffold + MCP Server Bundling
+### Phase 1: Plugin Scaffold + Config
 1. Create plugin directory structure
 2. Write `plugin.json` manifest
-3. Copy existing `mcp-server/` into plugin as `mcp-server/`
-4. Write `.mcp.json` to register the single merged server
-5. Write `hooks.json` with `SessionStart` config check
-6. Write `scripts/verify-config.sh`
-7. Write `/setup` skill
-
-### Phase 2: Add Local SQLite Tools to MCP Server
-1. Port `src/lib/db/client.ts` and `schema.sql` into `mcp-server/src/db/`
-2. Port `src/lib/templates/parser.ts` into `mcp-server/src/templates/`
-3. Add local contact tools (`local-contacts.ts`): CRUD, search, import
-4. Add template tools (`local-templates.ts`): CRUD, variable resolution
-5. Add list tools (`local-lists.ts`): CRUD, member management
-6. Add activity tools (`local-activities.ts`): logging, dual-write to Notion
-7. Add import tools (`local-import.ts`): CSV parsing, Notion DB sync
-8. Register all new tools in `index.ts`
-
-### Phase 3: Skills
-1. Write `/create-crm` skill (embed schema, 3-phase creation logic)
-2. Write `/send-sms` and `/send-whatsapp` skills
-3. Write `/import-contacts` skill (CSV + Notion)
-4. Write `/connect-notion` skill
-5. Write `/manage-templates` skill
-6. Write `/bulk-message` skill
+3. Write `.mcp.json` for single server
+4. Write `hooks.json` with `SessionStart` config check
+5. Write `scripts/verify-config.sh` (checks both env vars)
+6. Write `/setup` skill
 7. Write `/crm-status` skill
 
-### Phase 4: Agent + Memory
+### Phase 2: Refactor MCP Server (Remove Accounts, Remove SQLite)
+1. Remove `accounts.ts` tools entirely
+2. Remove `get_account_overview` from `relationships.ts`
+3. Simplify `contacts.ts` — remove auto-account creation, Company becomes text
+4. Simplify `activities.ts` — remove account params
+5. Simplify `opportunities.ts` — remove Account relation
+6. Update `intelligence.ts` — remove account-based analytics
+7. Update schema loader to use `NOTION_CRM_PAGE_ID` for parent
+8. Port `templates/parser.ts` into MCP server
+
+### Phase 3: New MCP Tools (Lists, Templates, Import)
+1. Add `lists.ts` — CRUD + member management via Notion relations
+2. Add `templates.ts` — CRUD + resolve via Notion API
+3. Add `import.ts` — CSV parsing + Notion page creation
+4. Add `setup_lists_database` and `setup_templates_database` tools
+5. Register all new tools in `index.ts`
+
+### Phase 4: Skills
+1. Write `/create-crm` skill (create all 5 databases under parent page)
+2. Write `/send-sms` and `/send-whatsapp` skills
+3. Write `/import-contacts` skill
+4. Write `/manage-templates` skill
+5. Write `/manage-list` skill
+6. Write `/bulk-message` skill
+
+### Phase 5: Agent + Memory
 1. Write `crm-assistant.md` agent definition
 2. Configure persistent memory for cross-session learning
 
-### Phase 5: Playground Integrations
-1. Extend `/manage-templates` to generate Playground HTML for template editing
-2. Extend `/bulk-message` to generate Playground HTML for contact selection
-3. Extend `/create-crm` to generate Playground HTML for schema customization
+### Phase 6: Playground Integrations
+1. `/manage-list` generates Playground HTML for list management
+2. `/manage-templates` generates Playground HTML for template editing
+3. `/import-contacts` generates Playground HTML for CSV column mapping
 
-### Phase 6: Testing & Documentation
+### Phase 7: Testing & Documentation
 1. Test full installation flow
 2. Test each skill end-to-end
-3. Test MCP server tools individually
+3. Test all MCP server tools
 4. Write user-facing README with setup instructions
 
 ---
@@ -503,28 +636,32 @@ With `memory: project`, the agent remembers user preferences, common contacts, f
 ## Verification Plan
 
 1. **Plugin installs cleanly**: `claude plugin install ./notion-crm-plugin` succeeds
-2. **SessionStart hook**: New session shows config status
-3. **`/setup`**: Walks through first-time configuration successfully
-4. **MCP tools**: Single server starts; all ~41 tools (26 existing + 15 new) respond correctly
-5. **`/create-crm`**: Creates 3 Notion databases with relations
-6. **`/send-sms`**: Full flow from template selection to message delivery
-7. **`/import-contacts`**: CSV file imports correctly
-8. **`/connect-notion`**: Connects to Notion DB and imports contacts
-9. **`/crm-status`**: Shows accurate system state
+2. **SessionStart hook**: New session shows config status (missing vars → "Run /setup")
+3. **`/setup`**: Creates all 5 databases under parent page, saves schema
+4. **MCP tools**: All tools respond correctly (contacts, opportunities, lists, templates, activities, pipeline)
+5. **`/create-crm`**: Creates databases with correct relations
+6. **`/send-sms`**: Full flow — pick template from Notion → pick list → resolve → send → log activity
+7. **`/import-contacts`**: CSV file imports to Notion Contacts DB correctly
+8. **`/manage-list`**: Playground generates, user can manage list visually
+9. **`/crm-status`**: Shows accurate system state (all 5 databases, counts)
 10. **Playground integrations**: HTML files generate and work in browser
 
 ---
 
 ## Key Files to Reuse From Current Codebase
 
-| File | What to Reuse |
-|------|---------------|
-| `mcp-server/` (entire directory) | All 26 MCP tools, operations, utils — as-is |
-| `src/lib/db/client.ts` | All SQLite CRUD operations — port to new MCP server |
-| `src/lib/db/schema.sql` | Database schema — copy directly |
-| `src/lib/templates/parser.ts` | Variable extraction/substitution engine — port to MCP |
-| `src/lib/templates/channels.ts` | Channel configs — embed in skills |
-| `src/lib/schema/default-schema.ts` | CRM schema definitions — embed in skill |
-| `src/lib/notion/create-crm.ts` | 3-phase creation logic — port to skill/MCP |
-| `src/lib/notion/rate-limiter.ts` | Rate limiting — reuse in MCP server |
-| `src/lib/notion/client.ts` | Notion HTTP client — reuse in MCP server |
+| File | What to Reuse | Changes Needed |
+|------|---------------|----------------|
+| `mcp-server/src/tools/contacts.ts` | Contact CRUD tools | Remove auto-account creation |
+| `mcp-server/src/tools/opportunities.ts` | Opportunity CRUD tools | Remove Account relation |
+| `mcp-server/src/tools/relationships.ts` | `link_records` tool | Remove `get_account_overview` |
+| `mcp-server/src/tools/activities.ts` | Activity tools | Remove account params |
+| `mcp-server/src/tools/pipeline.ts` | Pipeline analytics | Remove account analytics |
+| `mcp-server/src/tools/intelligence.ts` | Scoring/analytics | Remove account analytics |
+| `mcp-server/src/operations/` | All Notion API operations | Reuse as-is |
+| `mcp-server/src/utils/` | Formatters, validators, date utils | Remove account formatters |
+| `mcp-server/src/schema/` | Schema loader/validator | Update for new DB architecture |
+| `src/lib/templates/parser.ts` | Variable engine | Port to MCP server as-is |
+| `src/lib/templates/channels.ts` | Channel configs | Embed in skills |
+| `src/lib/schema/default-schema.ts` | Schema definitions | Rewrite: remove Accounts, add Lists + Templates |
+| `src/lib/notion/rate-limiter.ts` | Rate limiting | Reuse in MCP server |

@@ -3,6 +3,7 @@ import { redirect } from "next/navigation";
 import { CreateCRMFlow } from "@/components/dashboard/create-crm-flow";
 import { MessageTemplatesSection } from "@/components/messages/message-templates-section";
 import { SendSMSFlowStepper } from "@/components/messages/send-sms-flow-stepper";
+import { SendWhatsAppFlowStepper } from "@/components/messages/send-whatsapp-flow-stepper";
 import { ContactsPage } from "@/components/contacts/contacts-page";
 import { ListsPage } from "@/components/lists/lists-page";
 import { McpStatusPage } from "@/components/mcp-connect/mcp-status-page";
@@ -91,6 +92,12 @@ export default async function DashboardPage() {
               </svg>
               Send SMS
             </TabsTrigger>
+            <TabsTrigger value="send-whatsapp">
+              <svg className="w-4 h-4 mr-2" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                <path d="M21 11.5a8.38 8.38 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.38 8.38 0 0 1-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 0 1-.9-3.8 8.5 8.5 0 0 1 4.7-7.6 8.38 8.38 0 0 1 3.8-.9h.5a8.48 8.48 0 0 1 8 8v.5z"/>
+              </svg>
+              Send WhatsApp
+            </TabsTrigger>
           </TabsList>
 
           <TabsContent value="connect-notion" className="bg-cream texture-paper card-paper p-6 rounded-b border-2 border-t-0 border-wood-light">
@@ -115,6 +122,10 @@ export default async function DashboardPage() {
 
           <TabsContent value="send-sms" className="bg-cream texture-paper card-paper p-6 rounded-b border-2 border-t-0 border-wood-light">
             <SendSMSFlowStepper />
+          </TabsContent>
+
+          <TabsContent value="send-whatsapp" className="bg-cream texture-paper card-paper p-6 rounded-b border-2 border-t-0 border-wood-light">
+            <SendWhatsAppFlowStepper />
           </TabsContent>
         </Tabs>
       </div>

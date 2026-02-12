@@ -19,6 +19,8 @@ export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
     const messages: SmsMessage[] = body.messages;
+    const channel: string = body.channel || "sms";
+    const activityType = channel === "whatsapp" ? "WhatsApp" : "SMS";
 
     if (!messages || !Array.isArray(messages) || messages.length === 0) {
       return NextResponse.json(
@@ -40,8 +42,8 @@ export async function POST(request: NextRequest) {
       // 1. Insert into local activities table
       const activityId = activityDB.create({
         contact_id: msg.contact_id,
-        type: "SMS",
-        description: `SMS sent to ${msg.contact_name}`,
+        type: activityType,
+        description: `${activityType} sent to ${msg.contact_name}`,
         notes: msg.message,
         status: "Completed",
         activity_date: now,
@@ -72,7 +74,7 @@ export async function POST(request: NextRequest) {
               parent: { database_id: activitiesDb.id },
               properties: {
                 Name: {
-                  title: [{ text: { content: `SMS to ${msg.contact_name}` } }],
+                  title: [{ text: { content: `${activityType} to ${msg.contact_name}` } }],
                 },
                 Type: { select: { name: "Email" } }, // Closest to SMS
                 Status: { select: { name: "Completed" } },

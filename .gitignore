@@ -55,3 +55,6 @@ yarn-error.log*
 # MCP Server
 mcp-server/build/
 mcp-server/node_modules/
+
+# WhatsApp MCP
+whatsapp-mcp/

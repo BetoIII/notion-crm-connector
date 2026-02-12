@@ -1,6 +1,7 @@
 "use client";
 
-import { CheckCircle2, XCircle, Minus, Database, Terminal } from "lucide-react";
+import { useState } from "react";
+import { CheckCircle2, XCircle, Minus, Database, ExternalLink, Loader2 } from "lucide-react";
 
 interface DatabaseStatusCardProps {
   dbKey: string;
@@ -9,6 +10,7 @@ interface DatabaseStatusCardProps {
   accessible: boolean;
   error: string | null;
   propertyCount: number;
+  onRefresh?: () => void;
 }
 
 const DB_ICONS: Record<string, string> = {
@@ -18,6 +20,10 @@ const DB_ICONS: Record<string, string> = {
   activities: "📋",
 };
 
+function notionUrl(id: string): string {
+  return `https://notion.so/${id.replace(/-/g, "")}`;
+}
+
 export function DatabaseStatusCard({
   dbKey,
   name,
@@ -25,16 +31,50 @@ export function DatabaseStatusCard({
   accessible,
   error,
   propertyCount,
+  onRefresh,
 }: DatabaseStatusCardProps) {
-  const isNotConfigured = error?.includes("Not yet configured");
+  const isNotConfigured = !id && (error?.includes("Not yet configured") || error?.includes("Not found in schema"));
   const emoji = DB_ICONS[dbKey] || "📁";
 
-  return (
+  const [inputUrl, setInputUrl] = useState("");
+  const [submitting, setSubmitting] = useState(false);
+  const [submitError, setSubmitError] = useState<string | null>(null);
+
+  async function handleConnect() {
+    if (!inputUrl.trim()) return;
+    setSubmitting(true);
+    setSubmitError(null);
+    try {
+      const res = await fetch("/api/mcp/schema/connect", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ key: dbKey, notionUrl: inputUrl.trim() }),
+      });
+      const data = await res.json();
+      if (!res.ok) {
+        setSubmitError(data.error || "Failed to connect");
+        return;
+      }
+      setInputUrl("");
+      onRefresh?.();
+    } catch {
+      setSubmitError("Network error");
+    } finally {
+      setSubmitting(false);
+    }
+  }
+
+  const isClickable = accessible && id;
+
+  const card = (
     <div
-      className="texture-paper card-paper rounded-sm p-5 relative overflow-hidden group transition-all duration-200 hover:-translate-y-0.5 hover:shadow-lg"
+      className={`texture-paper card-paper rounded-sm p-5 relative overflow-hidden group transition-all duration-200 hover:-translate-y-0.5 hover:shadow-lg ${
+        isClickable ? "cursor-pointer" : ""
+      }`}
       style={{
         transform: `rotate(${dbKey === "contacts" || dbKey === "opportunities" ? -0.3 : 0.3}deg)`,
       }}
+      onClick={isClickable ? () => window.open(notionUrl(id), "_blank", "noopener") : undefined}
     >
       {/* Index card top stripe */}
       <div
@@ -76,6 +116,9 @@ export function DatabaseStatusCard({
             <h4 className="font-heading font-bold text-sm text-charcoal truncate uppercase tracking-wide">
               {dbKey}
             </h4>
+            {isClickable && (
+              <ExternalLink className="h-3.5 w-3.5 text-smoke opacity-0 group-hover:opacity-100 transition-opacity ml-auto flex-shrink-0" />
+            )}
           </div>
 
           {/* Full name */}
@@ -98,17 +141,32 @@ export function DatabaseStatusCard({
               )}
             </div>
           ) : isNotConfigured ? (
-            <div className="mt-2 rounded bg-tan/10 border border-tan/30 px-3 py-2">
-              <div className="flex items-start gap-1.5">
-                <Terminal className="h-3 w-3 text-smoke mt-0.5 flex-shrink-0" />
-                <p className="text-[11px] font-body text-smoke leading-snug">
-                  Run{" "}
-                  <code className="font-mono text-amber-dim font-semibold">
-                    setup_activities_database
-                  </code>{" "}
-                  via Claude
-                </p>
+            <div className="mt-2" onClick={(e) => e.stopPropagation()}>
+              <div className="flex gap-2">
+                <input
+                  type="text"
+                  value={inputUrl}
+                  onChange={(e) => { setInputUrl(e.target.value); setSubmitError(null); }}
+                  onKeyDown={(e) => { if (e.key === "Enter") handleConnect(); }}
+                  placeholder="Paste Notion URL or database ID"
+                  disabled={submitting}
+                  className="flex-1 min-w-0 rounded border border-wood-light/50 bg-cream/80 px-2.5 py-1.5 text-[11px] font-mono text-charcoal placeholder:text-tan/60 focus:outline-none focus:ring-1 focus:ring-amber-dim/50 focus:border-amber-dim/50 disabled:opacity-50"
+                />
+                <button
+                  onClick={handleConnect}
+                  disabled={submitting || !inputUrl.trim()}
+                  className="rounded bg-olive/90 px-3 py-1.5 text-[11px] font-heading font-bold text-cream uppercase tracking-wide hover:bg-olive transition-colors disabled:opacity-40 disabled:cursor-not-allowed flex items-center gap-1.5"
+                >
+                  {submitting ? (
+                    <Loader2 className="h-3 w-3 animate-spin" />
+                  ) : (
+                    "Link"
+                  )}
+                </button>
               </div>
+              {submitError && (
+                <p className="text-[10px] font-body text-burnt-orange mt-1.5">{submitError}</p>
+              )}
             </div>
           ) : (
             <div className="mt-2 rounded bg-burnt-orange/5 border border-burnt-orange/20 px-3 py-2">
@@ -127,9 +185,8 @@ export function DatabaseStatusCard({
           )}
         </div>
       </div>
-
-      {/* Index card ruled line at bottom */}
-      <div className="absolute bottom-3 left-5 right-5 border-b border-wood-light/30" />
     </div>
   );
+
+  return card;
 }

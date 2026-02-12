@@ -3,7 +3,7 @@ import path from "path";
 
 const SCHEMA_PATH = path.join(process.cwd(), "mcp-server", "data", "crm-schema.json");
 
-interface McpDatabaseEntry {
+export interface McpDatabaseEntry {
   id: string;
   collection_id?: string;
   name: string;
@@ -47,4 +47,27 @@ export function getMcpDatabases(): Array<{
     id: db.id,
     propertyCount: Object.keys(db.properties || {}).length,
   }));
+}
+
+export function addDatabaseToSchema(key: string, entry: McpDatabaseEntry): void {
+  let schema = loadMcpSchema();
+
+  if (!schema) {
+    schema = {
+      version: "1.0",
+      last_updated: new Date().toISOString(),
+      last_validated: new Date().toISOString(),
+      databases: {},
+    };
+  }
+
+  schema.databases[key] = entry;
+  schema.last_updated = new Date().toISOString();
+
+  const dir = path.dirname(SCHEMA_PATH);
+  if (!fs.existsSync(dir)) {
+    fs.mkdirSync(dir, { recursive: true });
+  }
+
+  fs.writeFileSync(SCHEMA_PATH, JSON.stringify(schema, null, 2), "utf-8");
 }

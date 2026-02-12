@@ -7,8 +7,6 @@ import { Button } from "@/components/ui/button";
 import {
   RefreshCw,
   Key,
-  CheckCircle2,
-  XCircle,
   Server,
   Loader2,
   AlertTriangle,
@@ -50,70 +48,8 @@ export function McpStatusPage({ mcpPath }: McpStatusPageProps) {
 
   if (!status) return null;
 
-  const statusLabel = status.allConnected
-    ? "ALL SYSTEMS GO"
-    : status.someConnected
-      ? "PARTIAL CONNECTION"
-      : "NOT CONFIGURED";
-
-  const statusColor = status.allConnected
-    ? "text-olive"
-    : status.someConnected
-      ? "text-amber-dim"
-      : "text-smoke";
-
-  const statusBg = status.allConnected
-    ? "bg-olive/10"
-    : status.someConnected
-      ? "bg-amber-glow/10"
-      : "bg-tan/20";
-
   return (
     <div className="space-y-6 fade-in">
-      {/* Status Banner */}
-      <div className="texture-wood border-4 border-wood-dark rounded p-6">
-        <div className="flex items-center justify-between">
-          <div className="flex items-center gap-4">
-            <div className={`rounded-full p-2 ${statusBg}`}>
-              {status.allConnected ? (
-                <CheckCircle2 className={`h-7 w-7 ${statusColor}`} />
-              ) : status.someConnected ? (
-                <AlertTriangle className={`h-7 w-7 ${statusColor}`} />
-              ) : (
-                <XCircle className={`h-7 w-7 ${statusColor}`} />
-              )}
-            </div>
-            <div>
-              <h2
-                className={`font-heading text-2xl font-bold text-embossed ${
-                  status.allConnected
-                    ? "text-olive"
-                    : status.someConnected
-                      ? "text-amber-glow"
-                      : "text-cream/60"
-                }`}
-              >
-                {statusLabel}
-              </h2>
-              <p className="text-cream/70 text-sm font-body mt-0.5">
-                {status.connectedCount}/{status.totalCount} databases connected
-              </p>
-            </div>
-          </div>
-          <Button
-            onClick={refresh}
-            variant="ghost"
-            size="sm"
-            className="text-cream/70 hover:text-cream hover:bg-cream/10"
-            disabled={loading}
-          >
-            <RefreshCw
-              className={`h-4 w-4 ${loading ? "animate-spin" : ""}`}
-            />
-          </Button>
-        </div>
-      </div>
-
       {/* Prerequisites Row */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
         {/* API Key Status */}
@@ -202,6 +138,7 @@ export function McpStatusPage({ mcpPath }: McpStatusPageProps) {
               accessible={db.accessible}
               error={db.error}
               propertyCount={db.propertyCount}
+              onRefresh={refresh}
             />
           ))}
         </div>

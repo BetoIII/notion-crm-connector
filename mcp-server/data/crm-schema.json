@@ -1,7 +1,7 @@
 {
   "version": "2.6.0",
-  "last_updated": "2025-12-09T00:00:00.000Z",
-  "last_validated": "2026-01-05T00:00:00.000Z",
+  "last_updated": "2026-02-11T00:00:00.000Z",
+  "last_validated": "2026-02-11T00:00:00.000Z",
   "validation_config": {
     "max_stale_days": 7,
     "auto_heal": true
@@ -17,8 +17,15 @@
     "relation_format": "Relations require page IDs in UUID format: { \"relation\": [{ \"id\": \"xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx\" }] }",
     "database_vs_collection_ids": {
       "explanation": "Notion databases have TWO identifiers: database_id (for API operations) and collection_id (internal data source). These may differ.",
-      "use_database_id_for": ["create_page parent", "query_database", "update_page"],
-      "collection_id_appears_in": ["relation data sources", "collection:// URLs"],
+      "use_database_id_for": [
+        "create_page parent",
+        "query_database",
+        "update_page"
+      ],
+      "collection_id_appears_in": [
+        "relation data sources",
+        "collection:// URLs"
+      ],
       "note": "When MCP fetch returns 404, use query_database instead - it's more reliable for database validation."
     }
   },
@@ -89,17 +96,27 @@
   },
   "databases": {
     "accounts": {
-      "id": "2a4e833b-5a49-8131-b2ea-000b8ed052ac",
-      "collection_id": "2a4e833b-5a49-8131-b2ea-000b8ed052ac",
-      "name": "🗃️ Accounts (Companies)",
-      "display_name": "🗃️ Accounts (Companies)",
+      "id": "2ffacd2e-b5d5-81f7-aa9b-c4aa2df8ac86",
+      "collection_id": "2ffacd2e-b5d5-81f7-aa9b-c4aa2df8ac86",
+      "name": "Accounts (Companies)",
+      "display_name": "Accounts (Companies)",
       "properties": {
-        "Company  Name": {
-          "id": "title",
-          "type": "title"
+        "City": {
+          "id": "%40O%5Bi",
+          "type": "select",
+          "options": [
+            "San Francisco",
+            "Los Angeles",
+            "New York",
+            "Seattle",
+            "Austin",
+            "Miami",
+            "San Jose",
+            "Las Vegas"
+          ]
         },
         "Company Type": {
-          "id": "eDptYQ",
+          "id": "Gt%3Bm",
           "type": "multi_select",
           "options": [
             "Mortgage Servicer",
@@ -127,8 +144,35 @@
             "Commercial"
           ]
         },
+        "Notes": {
+          "id": "Oy%7Bp",
+          "type": "rich_text"
+        },
+        "LinkedIn": {
+          "id": "Xjrt",
+          "type": "url"
+        },
+        "Address": {
+          "id": "Y~%60y",
+          "type": "rich_text"
+        },
+        "💼 Opportunities": {
+          "id": "ZBVo",
+          "type": "relation"
+        },
+        "⏩ Contact Database": {
+          "id": "%5COuB",
+          "type": "relation"
+        },
+        "Country": {
+          "id": "%5D%7CJA",
+          "type": "select",
+          "options": [
+            "USA"
+          ]
+        },
         "Segment": {
-          "id": "Z3FEZQ",
+          "id": "ogoM",
           "type": "select",
           "options": [
             "SMB",
@@ -136,26 +180,8 @@
             "Mid-Market"
           ]
         },
-        "Address": {
-          "id": "Address",
-          "type": "rich_text"
-        },
-        "City": {
-          "id": "Oj1vOw",
-          "type": "select",
-          "options": [
-            "San Francisco",
-            "Los Angeles",
-            "New York",
-            "Seattle",
-            "Austin",
-            "Miami",
-            "San Jose",
-            "Las Vegas"
-          ]
-        },
         "State": {
-          "id": "S0RMcA",
+          "id": "tr%5DX",
           "type": "select",
           "options": [
             "CA",
@@ -166,63 +192,62 @@
             "NV"
           ]
         },
-        "Country": {
-          "id": "RTtWVA",
-          "type": "select",
-          "options": [
-            "USA"
-          ]
-        },
-        "LinkedIn": {
-          "id": "LinkedIn",
-          "type": "url"
-        },
-        "Notes": {
-          "id": "Notes",
-          "type": "rich_text"
-        },
         "Acct Lead": {
-          "id": "Acct Lead",
+          "id": "wFw%40",
           "type": "people"
         },
-        "⏩ Contact Database": {
-          "id": "Ylp6YQ",
-          "type": "relation"
-        },
-        "💼 Opportunities": {
-          "id": "opportunities_relation",
-          "type": "relation"
+        "Company Name": {
+          "id": "title",
+          "type": "title"
         }
       }
     },
     "contacts": {
-      "id": "2a4e833b-5a49-81dd-a36c-faa344cc523f",
-      "collection_id": "2a4e833b-5a49-81f4-9868-000ba64b6240",
-      "name": "⏩ Contact Database",
-      "display_name": "⏩ Contact Database",
+      "id": "2ffacd2e-b5d5-8117-9549-c8a2aab2fbc0",
+      "collection_id": "2ffacd2e-b5d5-8117-9549-c8a2aab2fbc0",
+      "name": "Contacts",
+      "display_name": "Contacts",
       "properties": {
-        "Contact Name": {
-          "id": "title",
-          "type": "title"
-        },
-        "Title": {
-          "id": "Title",
-          "type": "rich_text"
-        },
-        "Contact Email": {
-          "id": "Contact Email",
-          "type": "email"
-        },
-        "Contact Phone": {
-          "id": "Contact Phone",
-          "type": "phone_number"
-        },
         "LinkedIn": {
-          "id": "LinkedIn",
+          "id": "%3ByRF",
           "type": "url"
         },
+        "Last Contact": {
+          "id": "Brv%7C",
+          "type": "date"
+        },
+        "Company": {
+          "id": "DX_H",
+          "type": "relation"
+        },
+        "Engagement Level": {
+          "id": "Osef",
+          "type": "select",
+          "options": [
+            "🔥 Hot",
+            "✅ Engaged",
+            "😐 Neutral",
+            "❄️ Cold"
+          ]
+        },
+        "Title": {
+          "id": "X%3AIr",
+          "type": "rich_text"
+        },
+        "Contact Phone": {
+          "id": "Y%5DVg",
+          "type": "phone_number"
+        },
+        "Champion Of": {
+          "id": "bjw%3A",
+          "type": "relation"
+        },
+        "💼 Opportunities": {
+          "id": "cE%7BJ",
+          "type": "relation"
+        },
         "Buying Role": {
-          "id": "WTtLUQ",
+          "id": "eJr%7B",
           "type": "select",
           "options": [
             "🎯 Champion",
@@ -234,18 +259,16 @@
             "🚫 Blocker"
           ]
         },
-        "Engagement Level": {
-          "id": "c1BAXg",
-          "type": "select",
-          "options": [
-            "🔥 Hot",
-            "✅ Engaged",
-            "😐 Neutral",
-            "❄️ Cold"
-          ]
+        "Acct Lead": {
+          "id": "sGzn",
+          "type": "people"
+        },
+        "Contact Email": {
+          "id": "xhf%7B",
+          "type": "email"
         },
         "Source": {
-          "id": "aENheQ",
+          "id": "~tzX",
           "type": "multi_select",
           "options": [
             "SREC",
@@ -255,50 +278,20 @@
             "Lookalikes - NYC"
           ]
         },
-        "Last Contact": {
-          "id": "Last Contact",
-          "type": "date"
-        },
-        "Acct Lead": {
-          "id": "Acct Lead",
-          "type": "people"
-        },
-        "Company": {
-          "id": "ZE1aPQ",
-          "type": "relation"
-        },
-        "💼 Opportunities": {
-          "id": "opportunities_relation",
-          "type": "relation"
+        "Contact Name": {
+          "id": "title",
+          "type": "title"
         }
       }
     },
     "opportunities": {
-      "id": "e853860d-5c8f-4821-a7f2-5e6ea7f32b06",
-      "collection_id": "e853860d-5c8f-4821-a7f2-5e6ea7f32b06",
-      "name": "🏆 Opportunities (Pipeline)",
-      "display_name": "🏆 Opportunities (Pipeline)",
+      "id": "2ffacd2e-b5d5-81d8-924d-c7adea3916c4",
+      "collection_id": "2ffacd2e-b5d5-81d8-924d-c7adea3916c4",
+      "name": "Opportunities (Pipeline)",
+      "display_name": "Opportunities (Pipeline)",
       "properties": {
-        "Name": {
-          "id": "title",
-          "type": "title"
-        },
-        "Stage": {
-          "id": "UV14QA",
-          "type": "select",
-          "options": [
-            "Discovery",
-            "Qualified",
-            "Demo/Pilot",
-            "Proposal",
-            "Negotiating",
-            "Contracting",
-            "Closed Won",
-            "Closed Lost"
-          ]
-        },
         "Opportunity Type": {
-          "id": "bjtcVg",
+          "id": "%3BjYR",
           "type": "select",
           "options": [
             "New Business",
@@ -306,18 +299,12 @@
             "Renewal"
           ]
         },
-        "Product/Service": {
-          "id": "a3ZpRw",
-          "type": "multi_select",
-          "options": [
-            "Lead Gen",
-            "Retention",
-            "Listings",
-            "Appointment Setting"
-          ]
+        "Close Probability": {
+          "id": "%3EMId",
+          "type": "number"
         },
         "Lead Source": {
-          "id": "X1FbUQ",
+          "id": "%40k%40U",
           "type": "multi_select",
           "options": [
             "SREC",
@@ -330,8 +317,58 @@
             "Partner"
           ]
         },
+        "Stage": {
+          "id": "E~sw",
+          "type": "select",
+          "options": [
+            "Discovery",
+            "Qualified",
+            "Demo/Pilot",
+            "Proposal",
+            "Negotiating",
+            "Contracting",
+            "Closed Won",
+            "Closed Lost"
+          ]
+        },
+        "Account": {
+          "id": "FgQc",
+          "type": "relation"
+        },
+        "ARR": {
+          "id": "JPWk",
+          "type": "number"
+        },
+        "Expected Close Date": {
+          "id": "LUy%7C",
+          "type": "date"
+        },
+        "Buying Committee": {
+          "id": "Nu~z",
+          "type": "relation"
+        },
+        "Next Step": {
+          "id": "Rljt",
+          "type": "rich_text"
+        },
+        "Deal Value": {
+          "id": "%5BqYw",
+          "type": "number"
+        },
+        "Champion": {
+          "id": "eSbR",
+          "type": "relation"
+        },
+        "Contract Length": {
+          "id": "ggWI",
+          "type": "number"
+        },
+        "MRR": {
+          "id": "lBE%3D",
+          "type": "number"
+        },
         "Lost Reason": {
-          "id": "al5mYw",
+          "id": "qtCt",
           "type": "select",
           "options": [
             "Price",
@@ -340,53 +377,91 @@
             "Competitor"
           ]
         },
-        "Deal Value": {
-          "id": "Deal Value",
-          "type": "number"
-        },
-        "ARR": {
-          "id": "ARR",
-          "type": "number"
-        },
-        "MRR": {
-          "id": "MRR",
-          "type": "number"
-        },
-        "Close Probability": {
-          "id": "Close Probability",
-          "type": "number"
-        },
-        "Contract Length": {
-          "id": "Contract Length",
-          "type": "number"
-        },
-        "Expected Close Date": {
-          "id": "Expected Close Date",
-          "type": "date"
+        "Product/Service": {
+          "id": "vmIq",
+          "type": "multi_select",
+          "options": [
+            "Lead Gen",
+            "Retention",
+            "Listings",
+            "Appointment Setting"
+          ]
         },
         "Contract Start Date": {
-          "id": "Contract Start Date",
+          "id": "~ijW",
           "type": "date"
         },
-        "Next Step": {
-          "id": "Next Step",
-          "type": "rich_text"
-        },
         "Owner": {
-          "id": "Owner",
+          "id": "~w%5Ei",
           "type": "people"
         },
+        "Name": {
+          "id": "title",
+          "type": "title"
+        }
+      }
+    },
+    "activities": {
+      "id": "1746ca6e-a663-422a-909f-999c5b630e92",
+      "collection_id": "1746ca6e-a663-422a-909f-999c5b630e92",
+      "name": "📅 Activities",
+      "display_name": "📅 Activities",
+      "properties": {
+        "Priority": {
+          "id": "Jg%5D%5B",
+          "type": "select",
+          "options": [
+            "High",
+            "Medium",
+            "Low"
+          ]
+        },
+        "Opportunity": {
+          "id": "J~Nq",
+          "type": "relation"
+        },
         "Account": {
-          "id": "Account",
+          "id": "QIYa",
           "type": "relation"
         },
-        "Buying Committee": {
-          "id": "Buying Committee",
+        "Date": {
+          "id": "T~%5Bj",
+          "type": "date"
+        },
+        "Due Date": {
+          "id": "ZrH%3A",
+          "type": "date"
+        },
+        "Type": {
+          "id": "a%7C%7Db",
+          "type": "select",
+          "options": [
+            "Call",
+            "Email",
+            "Meeting",
+            "Note",
+            "Task"
+          ]
+        },
+        "Notes": {
+          "id": "lCYO",
+          "type": "rich_text"
+        },
+        "Contact": {
+          "id": "yErD",
           "type": "relation"
         },
-        "Champion": {
-          "id": "Champion",
-          "type": "relation"
+        "Status": {
+          "id": "%7DzEY",
+          "type": "select",
+          "options": [
+            "Planned",
+            "Completed"
+          ]
+        },
+        "Description": {
+          "id": "title",
+          "type": "title"
         }
       }
     }

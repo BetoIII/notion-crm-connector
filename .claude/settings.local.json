@@ -33,7 +33,12 @@
       "Bash(git commit -m \"$\\(cat <<''EOF''\nFix Notion API endpoint inconsistencies for database operations\n\n- Update updateDataSource to use /databases endpoint instead of /data_sources\n- Change relation property field from data_source_id to database_id\n- Add appendBlockChildren method to client for future block operations\n- Add cursor pointer styles for better UX on interactive elements\n\nCo-Authored-By: Claude Sonnet 4.5 <noreply@anthropic.com>\nEOF\n\\)\")",
       "Bash(git commit:*)",
       "Bash(git checkout:*)",
-      "Bash(python3:*)"
+      "Bash(python3:*)",
+      "Bash(source:*)",
+      "Bash(for DB_ID in \"2ffacd2e-b5d5-8117-9549-c8a2aab2fbc0\" \"2ffacd2e-b5d5-81f7-aa9b-c4aa2df8ac86\" \"2ffacd2e-b5d5-81d8-924d-c7adea3916c4\" \"1746ca6e-a663-422a-909f-999c5b630e92\")",
+      "Bash(do)",
+      "Bash(echo:*)",
+      "Bash(done)"
     ]
   }
 }

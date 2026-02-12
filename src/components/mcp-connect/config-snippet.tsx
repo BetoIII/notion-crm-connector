@@ -17,6 +17,8 @@ interface ConfigSnippetProps {
 export function ConfigSnippet({ mcpServerPath }: ConfigSnippetProps) {
   const [copied, setCopied] = useState(false);
 
+  const whatsappMcpPath = mcpServerPath.replace(/mcp-server$/, "whatsapp-mcp/whatsapp-mcp-server");
+
   const configJson = JSON.stringify(
     {
       mcpServers: {
@@ -26,6 +28,15 @@ export function ConfigSnippet({ mcpServerPath }: ConfigSnippetProps) {
           env: {
             NOTION_API_KEY: "your-notion-api-key-here",
           },
+        },
+        "whatsapp": {
+          command: "uv",
+          args: [
+            "--directory",
+            whatsappMcpPath,
+            "run",
+            "main.py",
+          ],
         },
       },
     },
@@ -91,7 +102,11 @@ export function ConfigSnippet({ mcpServerPath }: ConfigSnippetProps) {
               </pre>
               <p className="mt-3 text-[11px] font-body text-smoke/70 text-center">
                 Replace &quot;your-notion-api-key-here&quot; with your Notion internal
-                integration token
+                integration token. For WhatsApp, run{" "}
+                <code className="font-mono text-amber-dim">npm run setup:whatsapp</code>{" "}
+                first and ensure{" "}
+                <code className="font-mono text-amber-dim">uv</code>{" "}
+                is installed.
               </p>
             </div>
           </div>

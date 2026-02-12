@@ -5,17 +5,20 @@ import { Button } from "@/components/ui/button";
 import { Check, Copy, AlertTriangle, Send, CheckCircle2, AlertCircle, XCircle, Loader2 } from "lucide-react";
 import { replaceVariables, validateVariables } from "@/lib/templates/parser";
 import type { MessageTemplate, ContactRecord } from "@/lib/templates/types";
+import { CHANNELS, type MessagingChannel } from "@/lib/templates/channels";
 
 interface PromptGeneratorEnhancedProps {
   template: MessageTemplate;
   contacts: ContactRecord[];
   onMessageLogged?: () => void;
+  channel?: MessagingChannel;
 }
 
 export function PromptGeneratorEnhanced({
   template,
   contacts,
   onMessageLogged,
+  channel = "sms",
 }: PromptGeneratorEnhancedProps) {
   const [generatedPrompts, setGeneratedPrompts] = useState<
     Array<{
@@ -53,9 +56,14 @@ export function PromptGeneratorEnhanced({
       return "None of the selected contacts have phone numbers.";
     }
 
+    const channelConfig = CHANNELS[channel];
     const promptLines = validPrompts.map((p, idx) => {
-      return `${idx + 1}. Send an iMessage to ${p.contact.phone} (${p.contact.contact_name || "Unknown"}) with:
-"${p.message}"`;
+      return channelConfig.generatePromptLine(
+        idx + 1,
+        p.contact.phone!,
+        p.contact.contact_name || "Unknown",
+        p.message
+      );
     });
 
     return `Send the following ${validPrompts.length} message${validPrompts.length === 1 ? "" : "s"}:
@@ -94,7 +102,7 @@ ${promptLines.join("\n\n")}`;
       const res = await fetch("/api/activities/log-sms", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ messages }),
+        body: JSON.stringify({ messages, channel }),
       });
 
       if (res.ok) {
@@ -248,7 +256,7 @@ ${promptLines.join("\n\n")}`;
             </div>
 
             <p className="mt-4 text-center text-xs text-smoke font-body">
-              Paste into Claude Desktop after enabling the &quot;Read and Send iMessages&quot; connector
+              {CHANNELS[channel].clipboardInstructions}
             </p>
 
             {/* Confirm Sent / Activity Logged */}
